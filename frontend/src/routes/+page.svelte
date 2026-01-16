@@ -354,39 +354,43 @@
 
 	<!-- Tech Stack Banner -->
 	<div class="tech-banner">
-		<div class="tech-section aws">
+		<div class="tech-section">
 			<img src="https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg" alt="AWS" class="tech-logo" />
-			<div class="tech-items">
+			<div class="tech-item">
 				<span class="tech-badge strands">Strands</span>
-				<span class="tech-desc">Agents</span>
+				<span class="tech-desc">Agents SDK</span>
+			</div>
+			<div class="tech-item">
 				<span class="tech-badge s3">S3 Vectors</span>
 				<span class="tech-desc">Fingerprints</span>
 			</div>
 		</div>
 		<div class="tech-divider"></div>
-		<div class="tech-section auth0">
+		<div class="tech-section">
 			<img src="https://cdn.auth0.com/website/bob/press/logo-light.png" alt="Auth0" class="tech-logo auth0-logo" />
-			<div class="tech-items">
+			<div class="tech-item">
 				<span class="tech-badge jwt">JWT</span>
 				<span class="tech-desc">Identity</span>
+			</div>
+			<div class="tech-item">
 				<span class="tech-badge fga">FGA</span>
 				<span class="tech-desc">Routing</span>
 			</div>
 		</div>
 		<div class="tech-divider"></div>
-		<div class="tech-section tinyfish">
+		<div class="tech-section">
 			<span class="tech-logo-text tinyfish-text">TinyFish</span>
-			<div class="tech-items">
+			<div class="tech-item">
 				<span class="tech-badge agentql">AgentQL</span>
-				<span class="tech-desc">Semantic detection</span>
+				<span class="tech-desc">Semantic</span>
 			</div>
 		</div>
 		<div class="tech-divider"></div>
-		<div class="tech-section cline">
+		<div class="tech-section">
 			<span class="tech-logo-text cline-text">Cline</span>
-			<div class="tech-items">
+			<div class="tech-item">
 				<span class="tech-badge cline-badge">CLI</span>
-				<span class="tech-desc">Code variation</span>
+				<span class="tech-desc">Variation</span>
 			</div>
 		</div>
 	</div>
@@ -937,24 +941,24 @@
 	.tech-section {
 		display: flex;
 		align-items: center;
-		gap: 1rem;
+		gap: 0.75rem;
 	}
 
 	.tech-logo {
-		height: 28px;
+		height: 24px;
 		width: auto;
 		filter: brightness(1.1);
 	}
 
 	.tech-logo.auth0-logo {
-		height: 24px;
+		height: 20px;
 	}
 
-	.tech-items {
+	.tech-item {
 		display: flex;
+		flex-direction: column;
 		align-items: center;
-		gap: 0.5rem;
-		flex-wrap: wrap;
+		gap: 0.2rem;
 	}
 
 	.tech-badge {
@@ -1012,7 +1016,9 @@
 
 	.tech-desc {
 		color: var(--text-muted);
-		font-size: 0.75rem;
+		font-size: 0.65rem;
+		text-transform: uppercase;
+		letter-spacing: 0.03em;
 	}
 
 	.tech-divider {
