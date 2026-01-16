@@ -1,0 +1,63 @@
+# Auth0 Configuration for HoneyAgent
+# Values are loaded from environment variables
+
+auth0:
+  # Domain (from AUTH0_DOMAIN env var)
+  domain: ${AUTH0_DOMAIN}
+
+  # API audience for token validation
+  audience: ${AUTH0_AUDIENCE}
+
+  # Token validation settings
+  token:
+    algorithms:
+      - RS256
+    verify_exp: true
+    verify_aud: true
+    verify_iss: true
+
+  # Custom claims namespace
+  claims:
+    namespace: "https://honeyagent.io/"
+    # Expected custom claims:
+    # - agent_type: "real" | "honeypot"
+    # - swarm_id: "swarm-alpha"
+    # - trap_profile: "db-admin" | "privileged" (honeypots only)
+    # - tracking_id: unique ID for tracking (honeypots only)
+
+# FGA Configuration
+fga:
+  # Store ID (from AUTH0_FGA_STORE_ID env var)
+  store_id: ${AUTH0_FGA_STORE_ID}
+
+  # API URL (from AUTH0_FGA_API_URL env var)
+  api_url: ${AUTH0_FGA_API_URL}
+
+  # Default swarm for permission checks
+  default_swarm: "swarm-alpha"
+
+  # Relations used in permission checks
+  relations:
+    - can_communicate
+    - can_execute
+
+  # Fallback behavior
+  fallback:
+    # If FGA is unreachable, fail open (allow) for demo
+    on_error: allow
+    # Timeout in seconds
+    timeout: 5
+
+# M2M Applications
+applications:
+  real:
+    name: HoneyAgent
+    # Credentials from env vars:
+    # AUTH0_REAL_CLIENT_ID
+    # AUTH0_REAL_CLIENT_SECRET
+
+  honeypot:
+    name: HoneyAgent-Honeypot
+    # Credentials from env vars:
+    # AUTH0_HONEYPOT_CLIENT_ID
+    # AUTH0_HONEYPOT_CLIENT_SECRET

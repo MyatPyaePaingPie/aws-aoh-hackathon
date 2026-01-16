@@ -63,7 +63,7 @@ class TestRoutingRules:
         """Valid real agents must route to real."""
         for rule in routing_config["rules"]:
             condition = rule["condition"]
-            if "valid" in condition and "fga_allowed" in condition and "not is_honeypot" in condition:
+            if "valid" in condition and "fga_allowed" in condition and "not identity.is_honeypot" in condition:
                 assert rule["route_to"] == "real"
                 break
         else:
