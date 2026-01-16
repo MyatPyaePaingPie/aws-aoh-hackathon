@@ -357,10 +357,10 @@
 		<div class="tech-section aws">
 			<img src="https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg" alt="AWS" class="tech-logo" />
 			<div class="tech-items">
-				<span class="tech-badge cloudwatch">CloudWatch</span>
-				<span class="tech-desc">Metrics</span>
-				<span class="tech-badge bedrock">Bedrock</span>
-				<span class="tech-desc">Intel</span>
+				<span class="tech-badge strands">Strands</span>
+				<span class="tech-desc">Agents</span>
+				<span class="tech-badge s3">S3 Vectors</span>
+				<span class="tech-desc">Fingerprints</span>
 			</div>
 		</div>
 		<div class="tech-divider"></div>
@@ -966,13 +966,13 @@
 		text-transform: uppercase;
 	}
 
-	.tech-badge.cloudwatch {
+	.tech-badge.strands {
 		background: linear-gradient(135deg, #ff9900, #ffb84d);
 		color: #232f3e;
 	}
 
-	.tech-badge.bedrock {
-		background: linear-gradient(135deg, #00a4ef, #4dc3ff);
+	.tech-badge.s3 {
+		background: linear-gradient(135deg, #3b82f6, #60a5fa);
 		color: #fff;
 	}
 
