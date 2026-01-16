@@ -1,2 +1,2 @@
-// CSS-only dashboard - no SSR restrictions needed
-// Keeping this file minimal
+// Disable SSR since we fetch from API on mount
+export const ssr = false;
