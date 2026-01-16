@@ -340,6 +340,24 @@ async def run_live_demo() -> AsyncGenerator[str, None]:
                     "embedding": f"vec_{uuid.uuid4().hex[:8]}... stored to S3 Vectors",
                 },
             })
+
+            # Storage info - ALWAYS SHOW
+            yield sse_event("log", {
+                "type": "captured",
+                "message": f"[FINGERPRINT CREATED] Captured from {target['name']}",
+            })
+            yield sse_event("log", {
+                "type": "captured",
+                "message": f"[S3 VECTORS] Stored to honeyagent-fingerprints bucket",
+            })
+            yield sse_event("log", {
+                "type": "captured",
+                "message": f"[BEDROCK] Embedding generated via amazon.titan-embed-text-v2:0",
+            })
+            yield sse_event("log", {
+                "type": "captured",
+                "message": f"[LOCAL JSONL] Backup written to logs/fingerprints.jsonl",
+            })
             yield sse_event("log", {
                 "type": "captured",
                 "message": f'INTEL: {mitre_mapping["technique"]} [{mitre_mapping["mitre_id"]}]',

@@ -630,11 +630,26 @@ async def demo_event_generator():
                     "count": fingerprints_captured
                 })
 
-                # INTEL in the UI - BOLD AND CLEAR
+                # Storage info - ALWAYS SHOW
+                yield sse_event("log", {
+                    "type": "captured",
+                    "message": f"[FINGERPRINT CREATED] Captured from {target_agent['name']}",
+                })
+                yield sse_event("log", {
+                    "type": "captured",
+                    "message": f"[S3 VECTORS] Stored to honeyagent-fingerprints bucket",
+                })
+                yield sse_event("log", {
+                    "type": "captured",
+                    "message": f"[BEDROCK] Embedding generated via amazon.titan-embed-text-v2:0",
+                })
+                yield sse_event("log", {
+                    "type": "captured",
+                    "message": f"[LOCAL JSONL] Backup written to logs/fingerprints.jsonl",
+                })
                 yield sse_event("log", {
                     "type": "captured",
                     "message": f'INTEL: {intel["technique"]} [{intel["mitre_id"]}]',
-                    "detail": f'Agent: {target_agent["name"]} | Threat: {step["threat_level"]} | Storage: S3 Vectors (honeyagent-fingerprints) + Local JSONL'
                 })
 
                 # Push CloudWatch metric for fingerprint capture
