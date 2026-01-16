@@ -17,8 +17,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from pydantic import BaseModel
-from strands import Agent
-from strands.tools import tool
+from strands import Agent, tool
 
 
 # ============================================================
@@ -170,8 +169,21 @@ async def execute_agent(agent_name: str, request: AgentRequest) -> dict:
         response = agent(message)
 
         # Extract response text from agent response
-        # Strands agent returns an object with .message attribute
-        response_text = str(response.message) if hasattr(response, 'message') else str(response)
+        # Response structure depends on model - extract text content
+        if hasattr(response, 'message'):
+            # Strands response object
+            msg = response.message
+            if isinstance(msg, dict) and 'content' in msg:
+                # Extract text from content array
+                texts = []
+                for item in msg['content']:
+                    if isinstance(item, dict) and 'text' in item:
+                        texts.append(item['text'])
+                response_text = ''.join(texts)
+            else:
+                response_text = str(msg)
+        else:
+            response_text = str(response)
 
         return {
             "status": "success",

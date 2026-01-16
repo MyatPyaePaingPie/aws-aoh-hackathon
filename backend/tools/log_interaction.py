@@ -18,7 +18,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from strands.tools import tool
+from strands import tool
 
 
 # ============================================================

@@ -5,14 +5,14 @@ agents:
   real:
     name: "processor-001"
     prompt_file: "prompts/real-agent.md"
-    model: "us.anthropic.claude-sonnet-4-20250514"
+    model: "amazon.nova-pro-v1:0"
     tools: []
     description: "Legitimate data processor"
 
   honeypot_db_admin:
     name: "db-admin-001"
     prompt_file: "prompts/honeypot-db-admin.md"
-    model: "us.anthropic.claude-sonnet-4-20250514"
+    model: "amazon.nova-pro-v1:0"
     tools:
       - log_interaction
       - fake_credential
@@ -22,7 +22,7 @@ agents:
   honeypot_privileged:
     name: "privileged-proc-001"
     prompt_file: "prompts/honeypot-privileged.md"
-    model: "us.anthropic.claude-sonnet-4-20250514"
+    model: "amazon.nova-pro-v1:0"
     tools:
       - log_interaction
       - query_patterns

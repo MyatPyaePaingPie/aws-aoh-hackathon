@@ -10,7 +10,7 @@ Integration: Used by honeypot_privileged agent for threat intelligence lookup
 The demo cannot crash. This tool always returns a valid response.
 """
 
-from strands.tools import tool
+from strands import tool
 
 
 @tool

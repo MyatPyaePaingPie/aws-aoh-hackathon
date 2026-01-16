@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict
 
-from strands.tools import tool
+from strands import tool
 
 
 # ============================================================
