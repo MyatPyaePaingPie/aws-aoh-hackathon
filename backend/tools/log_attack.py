@@ -11,14 +11,22 @@ Design:
 
 import json
 import logging
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 from strands import tool
 
-# Configure logging
+# Configure logging with console output
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+if not logger.handlers:
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter("%(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.propagate = False
 
 
 # ============================================================

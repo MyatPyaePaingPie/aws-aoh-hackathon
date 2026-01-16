@@ -17,6 +17,7 @@ Usage:
 import json
 import logging
 import os
+import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -25,9 +26,16 @@ import boto3
 from botocore.config import Config
 from strands import tool
 
-# Configure logging
+# Configure logging with console output
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+if not logger.handlers:
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter("%(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.propagate = False
 
 
 # ============================================================
@@ -39,6 +47,16 @@ VECTOR_BUCKET = os.environ.get("S3_VECTORS_BUCKET", "honeyagent-fingerprints")
 VECTOR_INDEX = "attacker-patterns"
 EMBEDDING_MODEL = "amazon.titan-embed-text-v2:0"
 EMBEDDING_DIMENSION = 1024
+
+# MITRE ATT&CK Technique Mapping
+THREAT_TO_MITRE = {
+    "credential_request": ("Credential Dumping", "T1110.004"),
+    "privilege_escalation": ("Privilege Escalation", "T1078.003"),
+    "data_exfiltration": ("Exfiltration Over Network", "T1041"),
+    "reconnaissance": ("Reconnaissance", "T1592"),
+    "probing": ("System Network Configuration Discovery", "T1016"),
+    "suspicious_query": ("Data Staged", "T1213.002"),
+}
 
 # Use absolute path relative to project root for reliable file operations
 ROOT = Path(__file__).parent.parent.parent
@@ -128,7 +146,9 @@ def _store_to_s3_vectors(
             "actions": json.dumps(metadata.get("threat_indicators", []))[:200],
         }
 
-        logger.debug(f"[S3_VECTORS] Prepared metadata: threat_level={safe_metadata['threat_level']}, agent={safe_metadata['source_agent']}")
+        threat_indicators = metadata.get("threat_indicators", [])
+        mitre_techniques = [THREAT_TO_MITRE.get(t, (t, "UNKNOWN"))[1] for t in threat_indicators]
+        logger.debug(f"[S3_VECTORS] Prepared metadata: threat_level={safe_metadata['threat_level']}, agent={safe_metadata['source_agent']}, techniques={mitre_techniques}")
 
         s3vectors.put_vectors(
             vectorBucketName=VECTOR_BUCKET,
@@ -165,6 +185,21 @@ def _calculate_threat_level(indicators: list[str]) -> str:
     return "UNKNOWN"
 
 
+def _format_threat_indicators(indicators: list[str]) -> str:
+    """Format threat indicators with MITRE ATT&CK technique mappings.
+
+    Returns a multi-line string with INTEL entries for each indicator.
+    """
+    lines = []
+    for indicator in indicators:
+        if indicator in THREAT_TO_MITRE:
+            technique_name, technique_id = THREAT_TO_MITRE[indicator]
+            lines.append(f"INTEL: {technique_name} [{technique_id}]")
+        else:
+            lines.append(f"INTEL: {indicator} [UNKNOWN]")
+    return "\n  ".join(lines)
+
+
 # ============================================================
 # TOOL IMPLEMENTATION
 # ============================================================
@@ -194,12 +229,13 @@ def log_interaction(
     """
     timestamp = datetime.now(timezone.utc).isoformat()
     threat_level = _calculate_threat_level(threat_indicators)
+    formatted_threats = _format_threat_indicators(threat_indicators)
 
     logger.info(f"\n{'='*80}")
     logger.info(f"[FINGERPRINT CREATED] {timestamp}")
     logger.info(f"  Agent: {source_agent}")
     logger.info(f"  Threat Level: {threat_level}")
-    logger.info(f"  Indicators: {', '.join(threat_indicators)}")
+    logger.info(f"  {formatted_threats}")
     if session_id:
         logger.info(f"  Session ID: {session_id}")
     logger.info(f"{'='*80}\n")
