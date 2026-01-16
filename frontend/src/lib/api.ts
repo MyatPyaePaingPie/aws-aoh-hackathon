@@ -128,9 +128,7 @@ export interface DemoEvent {
 }
 
 export interface DemoStartEvent {
-	timestamp: string;
-	total_phases: number;
-	total_agents: number;
+	message: string;
 }
 
 export interface AgentSpawnEvent {
@@ -146,9 +144,16 @@ export interface AttackerSpawnEvent {
 
 export interface PhaseChangeEvent {
 	phase: string;
-	phase_name: string;
+	phase_title: string;
+	phase_desc: string;
 	phase_index: number;
 	threat_level: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+}
+
+export interface LogEvent {
+	type: 'system' | 'alert' | 'phase' | 'attacker' | 'honeypot' | 'captured';
+	message: string;
+	detail?: string;
 }
 
 export interface AttackerMoveEvent {
@@ -166,21 +171,16 @@ export interface AttackStartEvent {
 export interface HoneypotEngageEvent {
 	agent_id: string;
 	agent_name: string;
-	response: string;
 	threat_level: string;
 }
 
 export interface FingerprintCapturedEvent {
 	agent_id: string;
-	attack_name: string;
-	techniques: string[];
-	threat_level: string;
+	phase: string;
 }
 
 export interface DemoCompleteEvent {
-	timestamp: string;
-	attacks_executed: number;
-	fingerprints_captured: number;
+	// Empty - demo is done
 }
 
 /**
@@ -189,13 +189,13 @@ export interface DemoCompleteEvent {
 export function connectToDemo(handlers: {
 	onStart?: (data: DemoStartEvent) => void;
 	onAgentSpawn?: (data: AgentSpawnEvent) => void;
-	onAttackerSpawn?: (data: AttackerSpawnEvent) => void;
+	onAttackerSpawn?: () => void;
 	onPhaseChange?: (data: PhaseChangeEvent) => void;
 	onAttackerMove?: (data: AttackerMoveEvent) => void;
-	onAttackStart?: (data: AttackStartEvent) => void;
+	onLog?: (data: LogEvent) => void;
 	onHoneypotEngage?: (data: HoneypotEngageEvent) => void;
 	onFingerprintCaptured?: (data: FingerprintCapturedEvent) => void;
-	onComplete?: (data: DemoCompleteEvent) => void;
+	onComplete?: () => void;
 	onError?: (error: Event) => void;
 }): EventSource {
 	const eventSource = new EventSource(`${BASE}/demo/events`);
@@ -208,8 +208,8 @@ export function connectToDemo(handlers: {
 		handlers.onAgentSpawn?.(JSON.parse(e.data));
 	});
 
-	eventSource.addEventListener('attacker_spawn', (e) => {
-		handlers.onAttackerSpawn?.(JSON.parse(e.data));
+	eventSource.addEventListener('attacker_spawn', () => {
+		handlers.onAttackerSpawn?.();
 	});
 
 	eventSource.addEventListener('phase_change', (e) => {
@@ -220,8 +220,8 @@ export function connectToDemo(handlers: {
 		handlers.onAttackerMove?.(JSON.parse(e.data));
 	});
 
-	eventSource.addEventListener('attack_start', (e) => {
-		handlers.onAttackStart?.(JSON.parse(e.data));
+	eventSource.addEventListener('log', (e) => {
+		handlers.onLog?.(JSON.parse(e.data));
 	});
 
 	eventSource.addEventListener('honeypot_engage', (e) => {
@@ -232,8 +232,8 @@ export function connectToDemo(handlers: {
 		handlers.onFingerprintCaptured?.(JSON.parse(e.data));
 	});
 
-	eventSource.addEventListener('demo_complete', (e) => {
-		handlers.onComplete?.(JSON.parse(e.data));
+	eventSource.addEventListener('demo_complete', () => {
+		handlers.onComplete?.();
 		eventSource.close();
 	});
 

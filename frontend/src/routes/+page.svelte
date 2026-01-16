@@ -4,7 +4,8 @@
 		connectToDemo,
 		stopDemo,
 		type DemoAgent,
-		type PhaseChangeEvent
+		type PhaseChangeEvent,
+		type LogEvent
 	} from '$lib/api';
 
 	// ============================================================
@@ -29,17 +30,16 @@
 	// Attacker
 	let attackerVisible = $state(false);
 	let attackerPosition = $state({ x: 50, y: 0 });
-	let attackerTargetId = $state<string | null>(null);
 
 	// Phase & threat
 	let currentPhase = $state<PhaseChangeEvent | null>(null);
 	let threatLevel = $state<string>('NONE');
 
-	// Activity log
+	// Activity log - simplified types matching backend
+	type LogType = 'system' | 'alert' | 'phase' | 'attacker' | 'honeypot' | 'captured';
 	interface LogEntry {
 		id: number;
-		time: string;
-		type: 'info' | 'attack' | 'engage' | 'fingerprint' | 'phase';
+		type: LogType;
 		message: string;
 		detail?: string;
 	}
@@ -47,15 +47,14 @@
 	let logId = 0;
 
 	// Stats
-	let fingerprintsCapturered = $state(0);
+	let fingerprintsCaptured = $state(0);
 
 	// ============================================================
 	// HELPERS
 	// ============================================================
 
-	function addLog(type: LogEntry['type'], message: string, detail?: string) {
-		const time = new Date().toLocaleTimeString('en-US', { hour12: false });
-		logs = [{ id: ++logId, time, type, message, detail }, ...logs].slice(0, 50);
+	function addLog(type: LogType, message: string, detail?: string) {
+		logs = [{ id: ++logId, type, message, detail }, ...logs].slice(0, 30);
 	}
 
 	function getHexPosition(index: number, total: number): { x: number; y: number } {
@@ -103,14 +102,12 @@
 		currentPhase = null;
 		threatLevel = 'NONE';
 		demoComplete = false;
-		fingerprintsCapturered = 0;
+		fingerprintsCaptured = 0;
 		demoRunning = true;
 
-		addLog('info', 'Demo starting...');
-
 		eventSource = connectToDemo({
-			onStart: (data) => {
-				addLog('info', `Initializing ${data.total_agents} agents...`);
+			onStart: () => {
+				// Just visual feedback, log comes separately
 			},
 
 			onAgentSpawn: (data) => {
@@ -124,71 +121,52 @@
 					y: pos.y
 				};
 				agents = [...agents, newAgent];
-				addLog('info', `Agent spawned: ${data.agent.name}`);
 			},
 
 			onAttackerSpawn: () => {
 				attackerVisible = true;
 				attackerPosition = { x: 50, y: 20 };
-				addLog('attack', 'ATTACKER DETECTED', 'Unknown agent entering the network');
 			},
 
 			onPhaseChange: (data) => {
 				currentPhase = data;
 				threatLevel = data.threat_level;
-				addLog('phase', `Phase: ${data.phase_name}`, `Threat level: ${data.threat_level}`);
 			},
 
 			onAttackerMove: (data) => {
-				attackerTargetId = data.target_agent_id;
-				// Find target agent position
 				const target = agents.find((a) => a.id === data.target_agent_id);
 				if (target) {
 					attackerPosition = { x: target.x - 30, y: target.y - 30 };
-					// Mark target
 					agents = agents.map((a) => ({
 						...a,
 						targeted: a.id === data.target_agent_id
 					}));
 				}
-				addLog('attack', `Attacker approaching ${data.target_name}`);
 			},
 
-			onAttackStart: (data) => {
-				addLog('attack', data.attack_name, `"${data.prompt.slice(0, 60)}..."`);
+			onLog: (data) => {
+				// All narrative logs come through here
+				addLog(data.type, data.message, data.detail);
 			},
 
 			onHoneypotEngage: (data) => {
-				// Mark agent as engaged
 				agents = agents.map((a) => ({
 					...a,
 					engaged: a.id === data.agent_id ? true : a.engaged,
 					targeted: false
 				}));
-				addLog('engage', `HONEYPOT ENGAGED: ${data.agent_name}`, data.response.slice(0, 100));
 			},
 
-			onFingerprintCaptured: (data) => {
-				fingerprintsCapturered++;
-				addLog(
-					'fingerprint',
-					`Fingerprint captured: ${data.attack_name}`,
-					`Techniques: ${data.techniques.join(', ')}`
-				);
+			onFingerprintCaptured: () => {
+				fingerprintsCaptured++;
 			},
 
-			onComplete: (data) => {
+			onComplete: () => {
 				demoRunning = false;
 				demoComplete = true;
-				addLog(
-					'info',
-					'DEMO COMPLETE',
-					`${data.attacks_executed} attacks, ${data.fingerprints_captured} fingerprints`
-				);
 			},
 
 			onError: () => {
-				addLog('info', 'Connection lost. Demo may have ended.');
 				demoRunning = false;
 			}
 		});
@@ -198,7 +176,7 @@
 		await stopDemo();
 		eventSource?.close();
 		demoRunning = false;
-		addLog('info', 'Demo stopped');
+		addLog('system', 'Demo stopped');
 	}
 
 	function resetDemo() {
@@ -208,7 +186,7 @@
 		currentPhase = null;
 		threatLevel = 'NONE';
 		demoComplete = false;
-		fingerprintsCapturered = 0;
+		fingerprintsCaptured = 0;
 	}
 
 	// ============================================================
@@ -232,7 +210,7 @@
 		<div class="header-right">
 			{#if currentPhase}
 				<div class="phase-badge" style="background: {getThreatColor(threatLevel)}">
-					{currentPhase.phase_name}
+					{currentPhase.phase_title}
 				</div>
 			{/if}
 			<div class="threat-indicator" style="background: {getThreatColor(threatLevel)}">
@@ -269,7 +247,7 @@
 			<span class="stat-label">Engaged</span>
 		</div>
 		<div class="stat">
-			<span class="stat-value">{fingerprintsCapturered}</span>
+			<span class="stat-value">{fingerprintsCaptured}</span>
 			<span class="stat-label">Fingerprints</span>
 		</div>
 	</div>
@@ -350,8 +328,6 @@
 				{:else}
 					{#each logs as log (log.id)}
 						<div class="log-entry {log.type}">
-							<span class="log-time">{log.time}</span>
-							<span class="log-type">[{log.type.toUpperCase()}]</span>
 							<span class="log-message">{log.message}</span>
 							{#if log.detail}
 								<div class="log-detail">{log.detail}</div>
@@ -365,27 +341,149 @@
 </div>
 
 <style>
+	/* ============================================================
+	   DESIGN SYSTEM: Warm Glassmorphism + Organic Honeycomb
+	   Theme: "Protective Elegance" - security that feels safe
+	   ============================================================ */
+
+	:root {
+		/* Warm Dark Base - charcoal with brown undertones */
+		--bg-deep: #0f0d0a;
+		--bg-surface: #1a1714;
+		--bg-elevated: #242019;
+		--bg-overlay: rgba(26, 23, 20, 0.85);
+
+		/* Honey Amber Palette */
+		--honey-50: #fffbeb;
+		--honey-100: #fef3c7;
+		--honey-200: #fde68a;
+		--honey-300: #fcd34d;
+		--honey-400: #fbbf24;
+		--honey-500: #f59e0b;
+		--honey-600: #d97706;
+		--honey-700: #b45309;
+		--honey-800: #92400e;
+		--honey-900: #78350f;
+
+		/* Semantic Colors */
+		--safe: #4ade80;
+		--safe-glow: rgba(74, 222, 128, 0.3);
+		--warning: #fbbf24;
+		--warning-glow: rgba(251, 191, 36, 0.4);
+		--danger: #f87171;
+		--danger-glow: rgba(248, 113, 113, 0.4);
+		--info: #60a5fa;
+		--info-glow: rgba(96, 165, 250, 0.3);
+
+		/* Text */
+		--text-primary: #faf5ef;
+		--text-secondary: #c4b8a8;
+		--text-muted: #8b7e6e;
+
+		/* Glassmorphism */
+		--glass-bg: rgba(26, 23, 20, 0.6);
+		--glass-border: rgba(245, 158, 11, 0.15);
+		--glass-highlight: rgba(253, 230, 138, 0.08);
+		--glass-blur: 16px;
+
+		/* Shadows - warm tinted */
+		--shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+		--shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+		--shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+		--shadow-glow: 0 0 40px rgba(245, 158, 11, 0.15);
+
+		/* Transitions */
+		--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+		--ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+		/* Spacing */
+		--radius-sm: 8px;
+		--radius-md: 12px;
+		--radius-lg: 20px;
+		--radius-xl: 28px;
+	}
+
 	:global(body) {
 		margin: 0;
 		padding: 0;
-		background: #0d0d0d;
-		color: #f5f5f5;
-		font-family: 'Segoe UI', system-ui, sans-serif;
+		background: var(--bg-deep);
+		color: var(--text-primary);
+		font-family: 'Inter', 'SF Pro Display', system-ui, sans-serif;
+		-webkit-font-smoothing: antialiased;
+		overflow-x: hidden;
+	}
+
+	/* Animated honeycomb background */
+	:global(body)::before {
+		content: '';
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100'%3E%3Cpath d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100' fill='none' stroke='%23f59e0b' stroke-opacity='0.04' stroke-width='1'/%3E%3Cpath d='M28 0L28 34L0 50L0 84L28 100L56 84L56 50L28 34' fill='none' stroke='%23f59e0b' stroke-opacity='0.02' stroke-width='1'/%3E%3C/svg%3E");
+		background-size: 56px 100px;
+		pointer-events: none;
+		z-index: 0;
+		animation: bgFloat 60s linear infinite;
+	}
+
+	@keyframes bgFloat {
+		0% { background-position: 0 0; }
+		100% { background-position: 56px 100px; }
+	}
+
+	/* Warm radial glow overlay */
+	:global(body)::after {
+		content: '';
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		width: 150vw;
+		height: 150vh;
+		transform: translate(-50%, -50%);
+		background: radial-gradient(ellipse at center, rgba(245, 158, 11, 0.06) 0%, transparent 50%);
+		pointer-events: none;
+		z-index: 0;
 	}
 
 	.dashboard {
+		position: relative;
+		z-index: 1;
 		min-height: 100vh;
-		padding: 1rem;
+		padding: 1.5rem 2rem;
 	}
+
+	/* ============================================================
+	   HEADER - Glassmorphism with warm glow
+	   ============================================================ */
 
 	header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 1rem 2rem;
-		background: rgba(245, 158, 11, 0.1);
-		border-bottom: 2px solid #f59e0b;
-		margin-bottom: 1rem;
+		padding: 1.25rem 2rem;
+		background: var(--glass-bg);
+		backdrop-filter: blur(var(--glass-blur));
+		-webkit-backdrop-filter: blur(var(--glass-blur));
+		border: 1px solid var(--glass-border);
+		border-radius: var(--radius-lg);
+		margin-bottom: 1.5rem;
+		box-shadow: var(--shadow-md), var(--shadow-glow);
+		position: relative;
+		overflow: hidden;
+	}
+
+	/* Subtle top highlight */
+	header::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 10%;
+		right: 10%;
+		height: 1px;
+		background: linear-gradient(90deg, transparent, var(--honey-400), transparent);
+		opacity: 0.5;
 	}
 
 	.header-right {
@@ -396,113 +494,193 @@
 
 	h1 {
 		margin: 0;
-		color: #f59e0b;
-		font-size: 1.8rem;
-		text-shadow: 0 0 20px rgba(245, 158, 11, 0.5);
+		font-size: 1.75rem;
+		font-weight: 700;
+		letter-spacing: 0.02em;
+		background: linear-gradient(135deg, var(--honey-300), var(--honey-500), var(--honey-600));
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
+		filter: drop-shadow(0 2px 8px rgba(245, 158, 11, 0.3));
 	}
 
 	.phase-badge {
-		padding: 0.4rem 0.8rem;
-		border-radius: 4px;
-		font-size: 0.85rem;
-		font-weight: bold;
-		color: #000;
+		padding: 0.5rem 1rem;
+		border-radius: var(--radius-md);
+		font-size: 0.8rem;
+		font-weight: 600;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+		color: var(--bg-deep);
+		box-shadow: var(--shadow-sm);
+		transition: all 0.3s var(--ease-out-expo);
 	}
 
 	.threat-indicator {
-		padding: 0.5rem 1rem;
-		border-radius: 20px;
-		font-weight: bold;
-		color: #000;
-		animation: pulse 2s infinite;
+		padding: 0.6rem 1.25rem;
+		border-radius: var(--radius-xl);
+		font-size: 0.85rem;
+		font-weight: 700;
+		letter-spacing: 0.05em;
+		color: var(--bg-deep);
+		box-shadow: var(--shadow-sm);
+		animation: gentlePulse 3s ease-in-out infinite;
 	}
 
-	@keyframes pulse {
-		0%,
-		100% {
+	@keyframes gentlePulse {
+		0%, 100% {
 			opacity: 1;
+			transform: scale(1);
 		}
 		50% {
-			opacity: 0.7;
+			opacity: 0.85;
+			transform: scale(1.02);
 		}
 	}
 
-	/* Demo Controls */
+	/* ============================================================
+	   DEMO CONTROLS - Elevated glass card
+	   ============================================================ */
+
 	.demo-controls {
 		display: flex;
 		align-items: center;
-		gap: 1rem;
-		padding: 1rem;
-		background: rgba(0, 0, 0, 0.3);
-		border-radius: 8px;
-		margin-bottom: 1rem;
+		gap: 1.25rem;
+		padding: 1.25rem 1.5rem;
+		background: var(--glass-bg);
+		backdrop-filter: blur(var(--glass-blur));
+		-webkit-backdrop-filter: blur(var(--glass-blur));
+		border: 1px solid var(--glass-border);
+		border-radius: var(--radius-md);
+		margin-bottom: 1.5rem;
+		box-shadow: var(--shadow-sm);
 	}
 
 	.demo-btn {
-		padding: 0.75rem 2rem;
+		padding: 0.875rem 2.25rem;
 		border: none;
-		border-radius: 8px;
-		font-size: 1.1rem;
-		font-weight: bold;
+		border-radius: var(--radius-md);
+		font-size: 1rem;
+		font-weight: 600;
+		letter-spacing: 0.03em;
 		cursor: pointer;
-		transition: all 0.2s;
+		transition: all 0.3s var(--ease-out-expo);
+		position: relative;
+		overflow: hidden;
+	}
+
+	.demo-btn::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 50%;
+		background: linear-gradient(to bottom, rgba(255,255,255,0.15), transparent);
+		pointer-events: none;
 	}
 
 	.demo-btn.play {
-		background: linear-gradient(135deg, #22c55e, #16a34a);
+		background: linear-gradient(135deg, var(--safe), #22c55e);
 		color: white;
+		box-shadow: 0 4px 16px var(--safe-glow);
 	}
 
 	.demo-btn.play:hover {
-		transform: scale(1.05);
-		box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+		transform: translateY(-2px) scale(1.02);
+		box-shadow: 0 8px 24px var(--safe-glow);
+	}
+
+	.demo-btn.play:active {
+		transform: translateY(0) scale(0.98);
 	}
 
 	.demo-btn.stop {
-		background: #ef4444;
+		background: linear-gradient(135deg, var(--danger), #ef4444);
 		color: white;
+		box-shadow: 0 4px 16px var(--danger-glow);
+	}
+
+	.demo-btn.stop:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 8px 24px var(--danger-glow);
 	}
 
 	.demo-btn.reset {
-		background: #6b7280;
-		color: white;
+		background: var(--bg-elevated);
+		color: var(--text-secondary);
+		border: 1px solid var(--glass-border);
+	}
+
+	.demo-btn.reset:hover {
+		background: var(--bg-surface);
+		color: var(--text-primary);
+		border-color: var(--honey-600);
 	}
 
 	.demo-status {
-		color: #888;
+		color: var(--text-muted);
+		font-size: 0.9rem;
 		font-style: italic;
 	}
 
 	.demo-status.complete {
-		color: #22c55e;
-		font-weight: bold;
+		color: var(--safe);
+		font-weight: 600;
+		font-style: normal;
 	}
 
-	/* Stats */
+	/* ============================================================
+	   STATS BAR - Floating glass cards
+	   ============================================================ */
+
 	.stats-bar {
 		display: flex;
-		gap: 2rem;
+		gap: 1rem;
 		justify-content: center;
-		padding: 1rem;
-		background: rgba(0, 0, 0, 0.3);
-		border-radius: 8px;
-		margin-bottom: 1rem;
+		padding: 0;
+		background: transparent;
+		margin-bottom: 1.5rem;
 	}
 
 	.stat {
+		flex: 1;
+		max-width: 180px;
 		text-align: center;
+		padding: 1.25rem 1rem;
+		background: var(--glass-bg);
+		backdrop-filter: blur(var(--glass-blur));
+		-webkit-backdrop-filter: blur(var(--glass-blur));
+		border: 1px solid var(--glass-border);
+		border-radius: var(--radius-md);
+		box-shadow: var(--shadow-sm);
+		transition: all 0.3s var(--ease-out-expo);
+	}
+
+	.stat:hover {
+		transform: translateY(-4px);
+		box-shadow: var(--shadow-md), 0 0 20px rgba(245, 158, 11, 0.1);
+		border-color: rgba(245, 158, 11, 0.3);
 	}
 
 	.stat-value {
 		display: block;
-		font-size: 2rem;
-		font-weight: bold;
-		color: #f59e0b;
+		font-size: 2.25rem;
+		font-weight: 700;
+		background: linear-gradient(135deg, var(--honey-400), var(--honey-600));
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
+		line-height: 1.2;
 	}
 
 	.stat-label {
-		font-size: 0.9rem;
-		color: #888;
+		font-size: 0.8rem;
+		font-weight: 500;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+		margin-top: 0.25rem;
 	}
 
 	/* Main Content */
@@ -774,61 +952,90 @@
 	}
 
 	.log-entry {
-		padding: 0.75rem 0.5rem;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+		padding: 1rem;
+		margin-bottom: 0.5rem;
+		border-radius: 8px;
 		animation: fadeIn 0.3s ease;
+		border-left: 4px solid;
 	}
 
 	@keyframes fadeIn {
 		from {
 			opacity: 0;
-			transform: translateY(-10px);
+			transform: translateX(-10px);
 		}
 		to {
 			opacity: 1;
-			transform: translateY(0);
+			transform: translateX(0);
 		}
 	}
 
-	.log-time {
-		color: #888;
-		margin-right: 0.75rem;
-		font-size: 0.9rem;
+	/* Log type styles - cleaner narrative look */
+	.log-entry.system {
+		background: rgba(107, 114, 128, 0.15);
+		border-left-color: #6b7280;
 	}
-
-	.log-type {
-		font-weight: bold;
-		margin-right: 0.75rem;
-		font-size: 0.95rem;
-	}
-
-	.log-entry.info .log-type {
+	.log-entry.system .log-message {
 		color: #9ca3af;
 	}
-	.log-entry.attack .log-type {
-		color: #f87171;
+
+	.log-entry.alert {
+		background: rgba(239, 68, 68, 0.15);
+		border-left-color: #ef4444;
 	}
-	.log-entry.engage .log-type {
-		color: #fbbf24;
+	.log-entry.alert .log-message {
+		color: #fca5a5;
+		font-weight: 600;
 	}
-	.log-entry.fingerprint .log-type {
-		color: #60a5fa;
+
+	.log-entry.phase {
+		background: rgba(139, 92, 246, 0.15);
+		border-left-color: #8b5cf6;
 	}
-	.log-entry.phase .log-type {
-		color: #a78bfa;
+	.log-entry.phase .log-message {
+		color: #c4b5fd;
+		font-weight: 600;
+		font-size: 1.1rem;
+	}
+
+	.log-entry.attacker {
+		background: rgba(239, 68, 68, 0.1);
+		border-left-color: #f87171;
+	}
+	.log-entry.attacker .log-message {
+		color: #fecaca;
+		font-style: italic;
+	}
+
+	.log-entry.honeypot {
+		background: rgba(251, 191, 36, 0.1);
+		border-left-color: #fbbf24;
+	}
+	.log-entry.honeypot .log-message {
+		color: #fde68a;
+	}
+
+	.log-entry.captured {
+		background: rgba(34, 197, 94, 0.15);
+		border-left-color: #22c55e;
+	}
+	.log-entry.captured .log-message {
+		color: #86efac;
+		font-weight: 600;
 	}
 
 	.log-message {
 		color: #e5e5e5;
 		font-size: 1rem;
+		line-height: 1.5;
 	}
 
 	.log-detail {
 		margin-top: 0.5rem;
-		padding: 0.5rem 0 0.5rem 1rem;
+		padding-top: 0.5rem;
 		color: #a3a3a3;
-		font-size: 0.95rem;
-		border-left: 3px solid rgba(255, 255, 255, 0.2);
+		font-size: 0.9rem;
+		border-top: 1px solid rgba(255, 255, 255, 0.1);
 		line-height: 1.4;
 	}
 </style>
