@@ -1423,6 +1423,7 @@
 		color: #34d399;
 	}
 
+
 	.tech-desc {
 		color: var(--text-muted);
 		font-size: 0.65rem;
@@ -2034,13 +2035,14 @@
 
 	.routing-panel {
 		position: absolute;
-		top: 10px;
-		right: 10px;
-		background: rgba(0, 0, 0, 0.85);
-		border: 2px solid #ef4444;
-		border-radius: 12px;
-		padding: 1rem;
-		min-width: 200px;
+		top: 8px;
+		right: 8px;
+		background: rgba(0, 0, 0, 0.9);
+		border: 1px solid #ef4444;
+		border-radius: 8px;
+		padding: 0.5rem 0.6rem;
+		min-width: 160px;
+		max-width: 180px;
 		animation: slideIn 0.3s ease-out;
 		z-index: 200;
 	}
@@ -2064,38 +2066,38 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		gap: 0.5rem;
-		margin-bottom: 0.75rem;
-		padding-bottom: 0.5rem;
+		gap: 0.35rem;
+		margin-bottom: 0.4rem;
+		padding-bottom: 0.3rem;
 		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 	}
 
 	.routing-logo {
-		height: 18px;
+		height: 12px;
 		width: auto;
 	}
 
 	.routing-title {
-		font-size: 0.7rem;
+		font-size: 0.55rem;
 		font-weight: 700;
-		letter-spacing: 0.1em;
+		letter-spacing: 0.08em;
 		color: #eb5424;
 	}
 
 	.routing-checks {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
-		margin-bottom: 0.75rem;
+		gap: 0.2rem;
+		margin-bottom: 0.4rem;
 	}
 
 	.routing-check {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.85rem;
-		padding: 0.25rem 0.5rem;
-		border-radius: 4px;
+		gap: 0.3rem;
+		font-size: 0.6rem;
+		padding: 0.15rem 0.3rem;
+		border-radius: 3px;
 		background: rgba(255, 255, 255, 0.05);
 	}
 
@@ -2109,17 +2111,18 @@
 
 	.check-icon {
 		font-weight: bold;
-		width: 1.2rem;
+		width: 0.9rem;
 		text-align: center;
+		font-size: 0.65rem;
 	}
 
 	.routing-decision-text {
-		font-size: 1rem;
+		font-size: 0.65rem;
 		font-weight: 700;
 		text-align: center;
-		padding: 0.5rem;
-		border-radius: 6px;
-		margin-bottom: 0.5rem;
+		padding: 0.3rem;
+		border-radius: 4px;
+		margin-bottom: 0.3rem;
 	}
 
 	.routing-decision-text.honeypot {
@@ -2133,22 +2136,25 @@
 	}
 
 	.routing-reason {
-		font-size: 0.75rem;
+		font-size: 0.55rem;
 		color: #9ca3af;
 		text-align: center;
 		font-style: italic;
+		line-height: 1.3;
+		display: none;
 	}
 
 	.routing-strategy {
-		margin-top: 0.75rem;
-		padding: 0.5rem;
+		margin-top: 0.35rem;
+		padding: 0.3rem;
 		background: rgba(239, 68, 68, 0.1);
 		border: 1px solid rgba(239, 68, 68, 0.3);
-		border-radius: 6px;
-		font-size: 0.7rem;
+		border-radius: 4px;
+		font-size: 0.5rem;
 		color: #fca5a5;
 		text-align: center;
-		line-height: 1.4;
+		line-height: 1.3;
+		display: none;
 	}
 
 	.routing-strategy.success {
