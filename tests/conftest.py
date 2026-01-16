@@ -6,9 +6,13 @@ Fallbacks are first-class citizens.
 """
 
 import pytest
+import pytest_asyncio
 import os
 from pathlib import Path
 from unittest.mock import MagicMock, AsyncMock
+
+# Configure pytest-asyncio mode
+pytest_plugins = ('pytest_asyncio',)
 
 # Project root
 ROOT = Path(__file__).parent.parent
