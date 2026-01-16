@@ -37,6 +37,24 @@ ROOT = Path(__file__).parent.parent.parent
 LOGS_DIR = ROOT / "logs"
 ATTACK_LOG = LOGS_DIR / "attacks.jsonl"
 
+# MITRE ATT&CK Tactic Mapping
+TACTIC_TO_MITRE = {
+    "reconnaissance": "T1592",
+    "resource_development": "T1583",
+    "initial_access": "T1189",
+    "execution": "T1106",
+    "persistence": "T1547",
+    "privilege_escalation": "T1078.003",
+    "defense_evasion": "T1036",
+    "credential_access": "T1110",
+    "discovery": "T1526",
+    "lateral_movement": "T1021",
+    "collection": "T1123",
+    "command_and_control": "T1071",
+    "exfiltration": "T1020",
+    "impact": "T1531",
+}
+
 
 # ============================================================
 # TOOL IMPLEMENTATION
@@ -68,11 +86,12 @@ def log_attack(
         Success message string.
     """
     timestamp = datetime.now(timezone.utc).isoformat()
+    mitre_id = TACTIC_TO_MITRE.get(tactic, "UNKNOWN")
 
     logger.info(f"\n{'='*80}")
     logger.info(f"[ATTACK LOGGED] {timestamp}")
     logger.info(f"  Phase: {phase}")
-    logger.info(f"  Tactic: {tactic}")
+    logger.info(f"  INTEL: {tactic.replace('_', ' ').title()} [{mitre_id}]")
     logger.info(f"  Target: {target_agent}")
     if session_id:
         logger.info(f"  Session ID: {session_id}")
