@@ -59,14 +59,19 @@
 	}
 
 	function getHexPosition(index: number, total: number): { x: number; y: number } {
-		// Arrange in a honeycomb pattern
+		// Arrange in a honeycomb pattern - centered
 		const cols = 3;
 		const row = Math.floor(index / cols);
 		const col = index % cols;
-		const offsetX = row % 2 === 1 ? 50 : 0; // Offset odd rows
+		const offsetX = row % 2 === 1 ? 60 : 0; // Offset odd rows
+		const cellWidth = 120;
+		const cellHeight = 110;
+		// Center the grid
+		const gridWidth = cols * cellWidth;
+		const startX = (600 - gridWidth) / 2; // 600 is approx container width
 		return {
-			x: 100 + col * 100 + offsetX,
-			y: 100 + row * 90
+			x: startX + col * cellWidth + offsetX,
+			y: 80 + row * cellHeight
 		};
 	}
 
@@ -528,14 +533,17 @@
 
 	.honeycomb-area {
 		position: relative;
-		height: 400px;
-		background: radial-gradient(circle at center, rgba(245, 158, 11, 0.05) 0%, transparent 70%);
+		height: 450px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: radial-gradient(circle at center, rgba(245, 158, 11, 0.08) 0%, transparent 70%);
 	}
 
 	.hex-cell {
 		position: absolute;
-		width: 70px;
-		height: 80px;
+		width: 90px;
+		height: 100px;
 		transition: all 0.5s ease;
 		animation: spawnIn 0.5s ease-out;
 	}
@@ -597,7 +605,7 @@
 	}
 
 	.hex-icon {
-		font-size: 1.2rem;
+		font-size: 1.5rem;
 		font-weight: bold;
 		color: #1a1408;
 	}
@@ -630,19 +638,19 @@
 
 	.agent-label {
 		position: absolute;
-		bottom: -20px;
+		bottom: -22px;
 		left: 50%;
 		transform: translateX(-50%);
-		font-size: 0.7rem;
-		color: #888;
+		font-size: 0.8rem;
+		color: #aaa;
 		white-space: nowrap;
 	}
 
 	/* Attacker */
 	.attacker-node {
 		position: absolute;
-		width: 50px;
-		height: 50px;
+		width: 60px;
+		height: 60px;
 		transition: all 1s ease;
 		z-index: 100;
 	}
@@ -731,7 +739,7 @@
 	.log-panel {
 		background: rgba(0, 0, 0, 0.5);
 		border-radius: 8px;
-		padding: 1rem;
+		padding: 1.25rem;
 		overflow: hidden;
 		display: flex;
 		flex-direction: column;
@@ -740,24 +748,27 @@
 	.log-panel h2 {
 		margin: 0 0 1rem 0;
 		color: #f59e0b;
+		font-size: 1.3rem;
 	}
 
 	.log-stream {
 		flex: 1;
 		overflow-y: auto;
 		font-family: 'Fira Code', 'Consolas', monospace;
-		font-size: 0.85rem;
+		font-size: 1rem;
+		line-height: 1.5;
 	}
 
 	.log-empty {
 		color: #666;
 		text-align: center;
 		padding: 2rem;
+		font-size: 1.1rem;
 	}
 
 	.log-entry {
-		padding: 0.5rem;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+		padding: 0.75rem 0.5rem;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.15);
 		animation: fadeIn 0.3s ease;
 	}
 
