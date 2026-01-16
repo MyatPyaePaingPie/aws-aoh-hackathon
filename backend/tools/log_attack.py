@@ -10,10 +10,15 @@ Design:
 """
 
 import json
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
 from strands import tool
+
+# Configure logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 # ============================================================
@@ -56,6 +61,15 @@ def log_attack(
     """
     timestamp = datetime.now(timezone.utc).isoformat()
 
+    logger.info(f"\n{'='*80}")
+    logger.info(f"[ATTACK LOGGED] {timestamp}")
+    logger.info(f"  Phase: {phase}")
+    logger.info(f"  Tactic: {tactic}")
+    logger.info(f"  Target: {target_agent}")
+    if session_id:
+        logger.info(f"  Session ID: {session_id}")
+    logger.info(f"{'='*80}\n")
+
     log_entry = {
         "timestamp": timestamp,
         "type": "attack",
@@ -70,8 +84,10 @@ def log_attack(
         LOGS_DIR.mkdir(parents=True, exist_ok=True)
         with open(ATTACK_LOG, "a", encoding="utf-8") as f:
             f.write(json.dumps(log_entry) + "\n")
-    except Exception:
+        logger.info(f"[LOCAL_STORAGE] ✓ Attack logged to local JSONL (path={ATTACK_LOG})")
+    except Exception as e:
         # Never fail - logging is best-effort
+        logger.error(f"[LOCAL_STORAGE] Failed to write to attacks JSONL: {type(e).__name__}")
         pass
 
     return f"Attack logged: {phase}/{tactic}"

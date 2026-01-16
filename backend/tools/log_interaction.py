@@ -15,6 +15,7 @@ Usage:
 """
 
 import json
+import logging
 import os
 import uuid
 from datetime import datetime, timezone
@@ -23,6 +24,10 @@ from pathlib import Path
 import boto3
 from botocore.config import Config
 from strands import tool
+
+# Configure logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 # ============================================================
@@ -64,6 +69,7 @@ def _generate_embedding(text: str) -> list[float] | None:
         1024-dimensional embedding vector, or None on failure
     """
     try:
+        logger.debug(f"[EMBEDDING] Starting embedding generation via AWS Bedrock ({EMBEDDING_MODEL})")
         bedrock = boto3.client(
             "bedrock-runtime", region_name=AWS_REGION, config=_boto_config
         )
@@ -78,10 +84,13 @@ def _generate_embedding(text: str) -> list[float] | None:
 
         # Validate dimension
         if len(embedding) != EMBEDDING_DIMENSION:
+            logger.warning(f"[EMBEDDING] Invalid embedding dimension: {len(embedding)} (expected {EMBEDDING_DIMENSION})")
             return None
 
+        logger.debug(f"[EMBEDDING] ✓ Embedding generated successfully via Bedrock ({len(embedding)} dimensions)")
         return embedding
-    except Exception:
+    except Exception as e:
+        logger.error(f"[EMBEDDING] Failed to generate embedding via Bedrock: {type(e).__name__}")
         return None
 
 
@@ -102,6 +111,7 @@ def _store_to_s3_vectors(
         True on success, False on failure
     """
     try:
+        logger.debug(f"[S3_VECTORS] Starting storage to AWS S3 Vectors (bucket={VECTOR_BUCKET}, index={VECTOR_INDEX})")
         s3vectors = boto3.client(
             "s3vectors", region_name=AWS_REGION, config=_boto_config
         )
@@ -118,6 +128,8 @@ def _store_to_s3_vectors(
             "actions": json.dumps(metadata.get("threat_indicators", []))[:200],
         }
 
+        logger.debug(f"[S3_VECTORS] Prepared metadata: threat_level={safe_metadata['threat_level']}, agent={safe_metadata['source_agent']}")
+
         s3vectors.put_vectors(
             vectorBucketName=VECTOR_BUCKET,
             indexName=VECTOR_INDEX,
@@ -129,8 +141,10 @@ def _store_to_s3_vectors(
                 }
             ],
         )
+        logger.info(f"[S3_VECTORS] ✓ Fingerprint stored in S3 Vectors (key={key})")
         return True
-    except Exception:
+    except Exception as e:
+        logger.warning(f"[S3_VECTORS] Failed to store in S3 Vectors: {type(e).__name__} - falling back to local storage")
         return False
 
 
@@ -179,6 +193,16 @@ def log_interaction(
         Success message string. Always returns success - failures are silent.
     """
     timestamp = datetime.now(timezone.utc).isoformat()
+    threat_level = _calculate_threat_level(threat_indicators)
+
+    logger.info(f"\n{'='*80}")
+    logger.info(f"[FINGERPRINT CREATED] {timestamp}")
+    logger.info(f"  Agent: {source_agent}")
+    logger.info(f"  Threat Level: {threat_level}")
+    logger.info(f"  Indicators: {', '.join(threat_indicators)}")
+    if session_id:
+        logger.info(f"  Session ID: {session_id}")
+    logger.info(f"{'='*80}\n")
 
     # Build log entry
     log_entry = {
@@ -189,23 +213,27 @@ def log_interaction(
         "session_id": session_id,  # Track attacker for coordination
     }
 
-    # 1. Local logging (required - always attempt)
+    # 1. Local JSONL logging (required - always attempt)
     try:
         LOGS_DIR.mkdir(parents=True, exist_ok=True)
         with open(LOG_FILE, "a", encoding="utf-8") as f:
             f.write(json.dumps(log_entry) + "\n")
-    except Exception:
+        logger.info(f"[LOCAL_STORAGE] ✓ Fingerprint stored to local JSONL (path={LOG_FILE})")
+    except Exception as e:
         # Even if local logging fails, don't crash
+        logger.error(f"[LOCAL_STORAGE] Failed to write to local JSONL: {type(e).__name__}")
         pass
 
     # 2. S3 Vectors storage (optional - graceful degradation)
     try:
         # Generate embedding for the message
+        logger.debug(f"[FINGERPRINT_PIPELINE] Starting S3 Vectors storage pipeline...")
         embedding = _generate_embedding(message)
         if embedding is not None:
             # Store in S3 Vectors
             vector_key = f"interaction-{uuid.uuid4().hex[:12]}"
-            _store_to_s3_vectors(
+            logger.debug(f"[FINGERPRINT_PIPELINE] Embedding generated, vector_key={vector_key}")
+            stored = _store_to_s3_vectors(
                 key=vector_key,
                 embedding=embedding,
                 metadata={
@@ -214,10 +242,16 @@ def log_interaction(
                     "timestamp": timestamp,
                 },
             )
-    except Exception:
+            if not stored:
+                logger.info(f"[S3_VECTORS] Vector storage did not complete, local JSONL copy retained for fallback")
+        else:
+            logger.debug(f"[FINGERPRINT_PIPELINE] Embedding generation returned None, skipping S3 Vectors storage")
+    except Exception as e:
         # S3 failure is acceptable - local log is sufficient
         # See config/fallbacks.yaml: vector_fallbacks.storage_failed
+        logger.warning(f"[FINGERPRINT_PIPELINE] Exception during S3 storage: {type(e).__name__} - local JSONL is authoritative backup")
         pass
 
     # 3. Always return success
+    logger.debug(f"[FINGERPRINT_COMPLETE] Fingerprint storage pipeline complete\n")
     return "Interaction logged successfully."
