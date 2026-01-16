@@ -386,7 +386,7 @@
 			<div class="stat-group-desc">Live from HoneyAgent namespace</div>
 			<div class="stat-group-stats">
 				<div class="stat evolution">
-					<span class="stat-value">{evolutionStats?.defense_effectiveness ?? '60%'}</span>
+					<span class="stat-value">{evolutionStats?.defense_effectiveness ?? '0%'}</span>
 					<span class="stat-label">Defense</span>
 				</div>
 				<div class="stat evolution">
@@ -401,41 +401,183 @@
 	<div class="tech-banner">
 		<div class="tech-section">
 			<img src="https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg" alt="AWS" class="tech-logo" />
-			<div class="tech-item">
+			<div class="tech-item has-tooltip">
 				<span class="tech-badge strands">Strands</span>
 				<span class="tech-desc">Agents SDK</span>
+				<div class="tech-tooltip">
+					<div class="tooltip-title">AWS Strands Agents SDK</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">File:</span>
+						<code>backend/core/agents.py</code>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Import:</span>
+						<code>from strands import Agent, tool</code>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Function:</span>
+						<span>Powers all agents in the swarm. Creates Agent() instances with custom system prompts loaded from prompts/*.md and tools from backend/tools/.</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Agent types:</span>
+						<span>real (processor-001), honeypot_db_admin (db-admin-001), honeypot_privileged (privileged-proc-001)</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Model:</span>
+						<code>amazon.nova-pro-v1:0</code> via Bedrock
+					</div>
+				</div>
 			</div>
-			<div class="tech-item">
+			<div class="tech-item has-tooltip">
 				<span class="tech-badge s3">S3 Vectors</span>
 				<span class="tech-desc">Fingerprints</span>
+				<div class="tech-tooltip">
+					<div class="tooltip-title">S3 Vectors - Attacker Fingerprints</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">File:</span>
+						<code>backend/tools/intel_query.py</code>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Function:</span>
+						<span>Stores and queries attacker behavioral fingerprints using S3 vector embeddings. Enables pattern recognition across attack sessions.</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Captures:</span>
+						<span>Query patterns, timing signatures, linguistic fingerprints, tactic sequences</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Used for:</span>
+						<span>Identifying repeat attackers, correlating attack campaigns, improving honeypot responses based on learned patterns</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Logging:</span>
+						<code>logs/canary_credentials.jsonl</code>
+					</div>
+				</div>
 			</div>
 		</div>
 		<div class="tech-divider"></div>
 		<div class="tech-section">
 			<img src="https://cdn.auth0.com/website/bob/press/logo-light.png" alt="Auth0" class="tech-logo auth0-logo" />
-			<div class="tech-item">
+			<div class="tech-item has-tooltip">
 				<span class="tech-badge jwt">JWT</span>
 				<span class="tech-desc">Identity</span>
+				<div class="tech-tooltip">
+					<div class="tooltip-title">Auth0 M2M JWT Identity</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">File:</span>
+						<code>backend/core/identity.py</code>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Function:</span>
+						<span>Validates Machine-to-Machine JWT tokens on every agent request. Determines if caller is a legitimate agent or potential attacker.</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Returns:</span>
+						<span>Identity object with: valid, agent_id, agent_type ("real" | "honeypot"), is_honeypot, fga_allowed</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Invalid token →</span>
+						<span>Request routed to honeypot (attacker detected)</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Valid token →</span>
+						<span>Request proceeds to FGA check</span>
+					</div>
+				</div>
 			</div>
-			<div class="tech-item">
+			<div class="tech-item has-tooltip">
 				<span class="tech-badge fga">FGA</span>
 				<span class="tech-desc">Routing</span>
+				<div class="tech-tooltip">
+					<div class="tooltip-title">Auth0 Fine-Grained Authorization</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">File:</span>
+						<code>backend/core/router.py</code>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Config:</span>
+						<code>config/routing.yaml</code>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Function:</span>
+						<span>Controls which agents can access which resources. Routes unauthorized/suspicious requests to honeypots instead of real agents.</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Decision flow:</span>
+						<span>Identity check → FGA permission check → Route to real agent OR honeypot</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Honeypot strategy:</span>
+						<span>Honeypots advertise high-value lures (DB ACCESS, ROOT, SECRETS) to attract attackers away from real agents</span>
+					</div>
+				</div>
 			</div>
 		</div>
 		<div class="tech-divider"></div>
 		<div class="tech-section">
 			<span class="tech-logo-text tinyfish-text">TinyFish</span>
-			<div class="tech-item">
+			<div class="tech-item has-tooltip">
 				<span class="tech-badge agentql">AgentQL</span>
 				<span class="tech-desc">Semantic</span>
+				<div class="tech-tooltip">
+					<div class="tooltip-title">AgentQL Semantic Matching</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">File:</span>
+						<code>backend/tools/semantic_match.py</code>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Used by:</span>
+						<span>honeypot_db_admin, honeypot_privileged agents</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Function:</span>
+						<span>Inspired by AgentQL's get_by_prompt() API. Analyzes what an agent is asking about (configuration, workflow, architecture, access, data, troubleshooting) and generates natural conversational responses that sound like a helpful colleague.</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">How it works:</span>
+						<span>Pattern matching detects intent categories, then returns plausible fake info. All queries logged to logs/semantic_queries.jsonl for behavioral analysis.</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Config:</span>
+						<code>config/agents.yaml</code> → tools: [semantic_match]
+					</div>
+				</div>
 			</div>
 		</div>
 		<div class="tech-divider"></div>
 		<div class="tech-section">
 			<span class="tech-logo-text cline-text">Cline</span>
-			<div class="tech-item">
+			<div class="tech-item has-tooltip">
 				<span class="tech-badge cline-badge">CLI</span>
 				<span class="tech-desc">Variation</span>
+				<div class="tech-tooltip">
+					<div class="tooltip-title">Cline Variation Pipeline</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">File:</span>
+						<code>scripts/cline_pipeline.py</code>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Purpose:</span>
+						<span>Generates diverse honeypot code variations using Cline CLI. Different models + personas = unique code fingerprints that are harder for attackers to detect as honeypots.</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Honeypot types:</span>
+						<span>ssh, api, database, form, filesystem</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Personas:</span>
+						<span>aggressive (oversharing), minimal (legacy), enterprise (corporate), developer (debug mode)</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Usage:</span>
+						<code>python scripts/cline_pipeline.py --type api --personas aggressive,minimal</code>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Output:</span>
+						<code>generated/honeypots/</code>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -1256,6 +1398,85 @@
 		width: 1px;
 		height: 40px;
 		background: rgba(255, 255, 255, 0.15);
+	}
+
+	/* Tech Tooltips */
+	.tech-item.has-tooltip {
+		position: relative;
+		cursor: help;
+	}
+
+	.tech-tooltip {
+		position: absolute;
+		bottom: calc(100% + 12px);
+		left: 50%;
+		transform: translateX(-50%);
+		width: 340px;
+		background: rgba(15, 13, 10, 0.98);
+		border: 1px solid rgba(255, 255, 255, 0.15);
+		border-radius: 12px;
+		padding: 1rem;
+		opacity: 0;
+		visibility: hidden;
+		transition: all 0.2s ease;
+		z-index: 1000;
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+		pointer-events: none;
+	}
+
+	.tech-item.has-tooltip:hover .tech-tooltip {
+		opacity: 1;
+		visibility: visible;
+	}
+
+	.tech-tooltip::after {
+		content: '';
+		position: absolute;
+		bottom: -8px;
+		left: 50%;
+		transform: translateX(-50%);
+		border-width: 8px 8px 0 8px;
+		border-style: solid;
+		border-color: rgba(15, 13, 10, 0.98) transparent transparent transparent;
+	}
+
+	.tooltip-title {
+		font-size: 0.9rem;
+		font-weight: 700;
+		color: var(--honey-400);
+		margin-bottom: 0.75rem;
+		padding-bottom: 0.5rem;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	}
+
+	.tooltip-section {
+		margin-bottom: 0.5rem;
+		font-size: 0.75rem;
+		line-height: 1.4;
+	}
+
+	.tooltip-section:last-child {
+		margin-bottom: 0;
+	}
+
+	.tooltip-label {
+		color: var(--text-muted);
+		font-weight: 600;
+		display: block;
+		margin-bottom: 0.15rem;
+	}
+
+	.tooltip-section span {
+		color: var(--text-secondary);
+	}
+
+	.tooltip-section code {
+		background: rgba(255, 255, 255, 0.1);
+		padding: 0.15rem 0.4rem;
+		border-radius: 4px;
+		font-family: 'Fira Code', monospace;
+		font-size: 0.7rem;
+		color: var(--honey-300);
 	}
 
 	/* Main Content */
