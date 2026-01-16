@@ -5,7 +5,8 @@
 		stopDemo,
 		type DemoAgent,
 		type PhaseChangeEvent,
-		type LogEvent
+		type LogEvent,
+		type EvolutionStats
 	} from '$lib/api';
 
 	// ============================================================
@@ -48,6 +49,9 @@
 
 	// Stats
 	let fingerprintsCaptured = $state(0);
+
+	// Evolution stats
+	let evolutionStats = $state<EvolutionStats | null>(null);
 
 	// ============================================================
 	// HELPERS
@@ -103,6 +107,7 @@
 		threatLevel = 'NONE';
 		demoComplete = false;
 		fingerprintsCaptured = 0;
+		evolutionStats = null;
 		demoRunning = true;
 
 		eventSource = connectToDemo({
@@ -161,6 +166,10 @@
 				fingerprintsCaptured++;
 			},
 
+			onEvolutionUpdate: (data) => {
+				evolutionStats = data.stats;
+			},
+
 			onComplete: () => {
 				demoRunning = false;
 				demoComplete = true;
@@ -187,6 +196,7 @@
 		threatLevel = 'NONE';
 		demoComplete = false;
 		fingerprintsCaptured = 0;
+		evolutionStats = null;
 	}
 
 	// ============================================================
@@ -250,6 +260,22 @@
 			<span class="stat-value">{fingerprintsCaptured}</span>
 			<span class="stat-label">Fingerprints</span>
 		</div>
+		<div class="stat evolution">
+			<span class="stat-value">{evolutionStats?.defense_effectiveness ?? '60%'}</span>
+			<span class="stat-label">Defense</span>
+		</div>
+		<div class="stat evolution">
+			<span class="stat-value">{evolutionStats?.improvement_since_start ?? '+0%'}</span>
+			<span class="stat-label">Learned</span>
+		</div>
+	</div>
+
+	<!-- AWS Integration Banner -->
+	<div class="aws-banner">
+		<span class="aws-badge">AWS CloudWatch</span>
+		<span class="aws-info">Metrics streaming to namespace: <code>HoneyAgent</code></span>
+		<span class="aws-badge bedrock">Bedrock Intel</span>
+		<span class="aws-info">Attack patterns indexed for semantic search</span>
 	</div>
 
 	<div class="main-content">
@@ -681,6 +707,69 @@
 		text-transform: uppercase;
 		color: var(--text-muted);
 		margin-top: 0.25rem;
+	}
+
+	/* Evolution stats - green theme */
+	.stat.evolution {
+		border-color: rgba(74, 222, 128, 0.3);
+		animation: evolutionPulse 2s ease-in-out infinite;
+	}
+
+	.stat.evolution .stat-value {
+		background: linear-gradient(135deg, #4ade80, #22c55e);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
+	}
+
+	@keyframes evolutionPulse {
+		0%, 100% {
+			box-shadow: var(--shadow-sm), 0 0 10px rgba(74, 222, 128, 0.1);
+		}
+		50% {
+			box-shadow: var(--shadow-sm), 0 0 20px rgba(74, 222, 128, 0.2);
+		}
+	}
+
+	/* AWS Integration Banner */
+	.aws-banner {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		padding: 0.75rem 1.5rem;
+		background: linear-gradient(135deg, rgba(255, 153, 0, 0.1), rgba(35, 47, 62, 0.3));
+		border: 1px solid rgba(255, 153, 0, 0.2);
+		border-radius: var(--radius-md);
+		margin-bottom: 1.5rem;
+		flex-wrap: wrap;
+	}
+
+	.aws-badge {
+		padding: 0.35rem 0.75rem;
+		background: linear-gradient(135deg, #ff9900, #ffb84d);
+		color: #232f3e;
+		font-size: 0.75rem;
+		font-weight: 700;
+		letter-spacing: 0.03em;
+		border-radius: 4px;
+		text-transform: uppercase;
+	}
+
+	.aws-badge.bedrock {
+		background: linear-gradient(135deg, #00a4ef, #4dc3ff);
+	}
+
+	.aws-info {
+		color: var(--text-secondary);
+		font-size: 0.85rem;
+	}
+
+	.aws-info code {
+		background: rgba(255, 153, 0, 0.15);
+		padding: 0.15rem 0.4rem;
+		border-radius: 3px;
+		font-family: 'Fira Code', monospace;
+		color: #ffb84d;
 	}
 
 	/* Main Content */

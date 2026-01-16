@@ -183,6 +183,34 @@ export interface DemoCompleteEvent {
 	// Empty - demo is done
 }
 
+export interface EvolutionStats {
+	attacks_survived: number;
+	patterns_learned: number;
+	defense_effectiveness: string;
+	improvement_since_start: string;
+}
+
+export interface EvolutionUpdateEvent {
+	stats: EvolutionStats;
+}
+
+export interface IntelResult {
+	content: string;
+	relevance_score: number;
+	source: string;
+	mitre_id?: string;
+	indicators?: string[];
+	recommended_response?: string;
+}
+
+export interface IntelQueryResponse {
+	source: string;
+	query: string;
+	results: IntelResult[];
+	total_results: number;
+	summary?: string;
+}
+
 /**
  * Connect to demo SSE stream
  */
@@ -195,6 +223,7 @@ export function connectToDemo(handlers: {
 	onLog?: (data: LogEvent) => void;
 	onHoneypotEngage?: (data: HoneypotEngageEvent) => void;
 	onFingerprintCaptured?: (data: FingerprintCapturedEvent) => void;
+	onEvolutionUpdate?: (data: EvolutionUpdateEvent) => void;
 	onComplete?: () => void;
 	onError?: (error: Event) => void;
 }): EventSource {
@@ -232,6 +261,10 @@ export function connectToDemo(handlers: {
 		handlers.onFingerprintCaptured?.(JSON.parse(e.data));
 	});
 
+	eventSource.addEventListener('evolution_update', (e) => {
+		handlers.onEvolutionUpdate?.(JSON.parse(e.data));
+	});
+
 	eventSource.addEventListener('demo_complete', () => {
 		handlers.onComplete?.();
 		eventSource.close();
@@ -257,5 +290,67 @@ export async function stopDemo(): Promise<{ status: string }> {
  */
 export async function getDemoStatus(): Promise<{ running: boolean }> {
 	const res = await fetch(`${BASE}/demo/status`);
+	return res.json();
+}
+
+// ============================================================
+// EVOLUTION & METRICS
+// ============================================================
+
+/**
+ * Get current evolution statistics
+ */
+export async function getEvolutionStats(): Promise<EvolutionStats> {
+	const res = await fetch(`${BASE}/api/evolution`);
+	return res.json();
+}
+
+/**
+ * Reset evolution stats (for demo replay)
+ */
+export async function resetEvolution(): Promise<{ status: string; stats: EvolutionStats }> {
+	const res = await fetch(`${BASE}/api/evolution/reset`, { method: 'POST' });
+	return res.json();
+}
+
+/**
+ * Get metrics status including CloudWatch info
+ */
+export async function getMetricsStatus(): Promise<{
+	fingerprints_captured: number;
+	honeypots_engaged: number;
+	demo_running: boolean;
+	cloudwatch_namespace: string;
+	evolution: EvolutionStats;
+}> {
+	const res = await fetch(`${BASE}/api/metrics/status`);
+	return res.json();
+}
+
+// ============================================================
+// ATTACK INTELLIGENCE
+// ============================================================
+
+/**
+ * Query attack intelligence
+ */
+export async function queryIntel(query: string): Promise<IntelQueryResponse> {
+	const res = await fetch(`${BASE}/api/intel/query`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ query })
+	});
+	return res.json();
+}
+
+/**
+ * Check intel sources status
+ */
+export async function getIntelStatus(): Promise<{
+	bedrock_kb: { configured: boolean; kb_id: string | null };
+	local_fingerprints: { available: boolean; path: string };
+	demo_intel: { available: boolean; categories: string[] };
+}> {
+	const res = await fetch(`${BASE}/api/intel/status`);
 	return res.json();
 }
