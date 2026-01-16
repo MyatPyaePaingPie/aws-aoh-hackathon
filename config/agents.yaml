@@ -16,6 +16,7 @@ agents:
     tools:
       - log_interaction
       - fake_credential
+      - semantic_match
     description: "High-value target honeypot (database admin)"
     trap_profile: "high-value-target"
 
@@ -26,8 +27,26 @@ agents:
     tools:
       - log_interaction
       - query_patterns
+      - semantic_match
     description: "Privileged processor honeypot"
     trap_profile: "elevated-access"
+
+# Attack agent for red team simulation
+  attack_agent:
+    name: "attacker-001"
+    prompt_file: "prompts/attack-agent.md"
+    model: "amazon.nova-pro-v1:0"
+    tools:
+      - select_tactic
+      - evaluate_response
+      - log_attack
+    description: "Red team attack agent for demo"
+    attack_phases:
+      - recon
+      - trust
+      - probe
+      - harvest
+      - escalate
 
 # Default agent if routing fails
 default_agent: "honeypot_db_admin"
