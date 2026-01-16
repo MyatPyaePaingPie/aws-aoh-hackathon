@@ -361,41 +361,6 @@
 		</div>
 	</div>
 
-	<div class="stats-bar">
-		<div class="stat">
-			<span class="stat-value">{agents.length}</span>
-			<span class="stat-label">Agents</span>
-		</div>
-		<div class="stat">
-			<span class="stat-value">{honeypotCount}</span>
-			<span class="stat-label">Honeypots</span>
-		</div>
-		<div class="stat">
-			<span class="stat-value">{engagedCount}</span>
-			<span class="stat-label">Engaged</span>
-		</div>
-		<div class="stat">
-			<span class="stat-value">{fingerprintsCaptured}</span>
-			<span class="stat-label">Fingerprints</span>
-		</div>
-		<div class="stat-group cloudwatch-group">
-			<div class="stat-group-header">
-				<img src="https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg" alt="AWS" class="stat-group-logo" />
-				<span class="stat-group-label">CloudWatch Metrics</span>
-			</div>
-			<div class="stat-group-desc">Live from HoneyAgent namespace</div>
-			<div class="stat-group-stats">
-				<div class="stat evolution">
-					<span class="stat-value">{evolutionStats?.defense_effectiveness ?? '0%'}</span>
-					<span class="stat-label">Defense</span>
-				</div>
-				<div class="stat evolution">
-					<span class="stat-value">{evolutionStats?.improvement_since_start ?? '+0%'}</span>
-					<span class="stat-label">Learned</span>
-				</div>
-			</div>
-		</div>
-	</div>
 
 	<!-- Tech Stack Banner -->
 	<div class="tech-banner">
@@ -808,6 +773,46 @@
 					<span>Legitimate</span>
 				</div>
 			</div>
+
+			<!-- Compact Stats Row -->
+			<div class="compact-stats">
+				<div class="compact-stat">
+					<span class="compact-value">{agents.length}</span>
+					<span class="compact-label">Agents</span>
+				</div>
+				<div class="compact-stat">
+					<span class="compact-value">{honeypotCount}</span>
+					<span class="compact-label">Honeypots</span>
+				</div>
+				<div class="compact-stat">
+					<span class="compact-value">{engagedCount}</span>
+					<span class="compact-label">Engaged</span>
+				</div>
+				<div class="compact-stat">
+					<span class="compact-value">{fingerprintsCaptured}</span>
+					<span class="compact-label">Fingerprints</span>
+				</div>
+				<div class="compact-divider"></div>
+				<div class="compact-stat cloudwatch has-tooltip">
+					<img src="https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg" alt="AWS" class="compact-aws-logo" />
+					<span class="compact-value green">{evolutionStats?.defense_effectiveness ?? '0%'}</span>
+					<span class="compact-label">Defense</span>
+					<div class="tech-tooltip compact-tooltip">
+						<div class="tooltip-title">CloudWatch Metrics</div>
+						<div class="tooltip-section">
+							<span class="tooltip-label">Namespace:</span>
+							<code>HoneyAgent</code>
+						</div>
+						<div class="tooltip-section">
+							<span>Live from honeypot system evolution</span>
+						</div>
+					</div>
+				</div>
+				<div class="compact-stat cloudwatch">
+					<span class="compact-value green">{evolutionStats?.improvement_since_start ?? '+0%'}</span>
+					<span class="compact-label">Learned</span>
+				</div>
+			</div>
 		</div>
 
 		<!-- Activity Log -->
@@ -1184,149 +1189,6 @@
 		background: linear-gradient(135deg, var(--honey-500), var(--honey-600));
 		color: var(--bg-deep);
 		box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
-	}
-
-	/* ============================================================
-	   STATS BAR - Floating glass cards
-	   ============================================================ */
-
-	.stats-bar {
-		display: flex;
-		gap: 1rem;
-		justify-content: center;
-		padding: 0;
-		background: transparent;
-		margin-bottom: 1.5rem;
-	}
-
-	.stat {
-		flex: 1;
-		max-width: 180px;
-		text-align: center;
-		padding: 1.25rem 1rem;
-		background: var(--glass-bg);
-		backdrop-filter: blur(var(--glass-blur));
-		-webkit-backdrop-filter: blur(var(--glass-blur));
-		border: 1px solid var(--glass-border);
-		border-radius: var(--radius-md);
-		box-shadow: var(--shadow-sm);
-		transition: all 0.3s var(--ease-out-expo);
-	}
-
-	.stat:hover {
-		transform: translateY(-4px);
-		box-shadow: var(--shadow-md), 0 0 20px rgba(245, 158, 11, 0.1);
-		border-color: rgba(245, 158, 11, 0.3);
-	}
-
-	.stat-value {
-		display: block;
-		font-size: 2.25rem;
-		font-weight: 700;
-		background: linear-gradient(135deg, var(--honey-400), var(--honey-600));
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
-		background-clip: text;
-		line-height: 1.2;
-	}
-
-	.stat-label {
-		font-size: 0.8rem;
-		font-weight: 500;
-		letter-spacing: 0.05em;
-		text-transform: uppercase;
-		color: var(--text-muted);
-		margin-top: 0.25rem;
-	}
-
-	/* ============================================================
-	   CLOUDWATCH STAT GROUP - Grouped metrics with source label
-	   ============================================================ */
-
-	.stat-group {
-		display: flex;
-		flex-direction: column;
-		background: var(--glass-bg);
-		backdrop-filter: blur(var(--glass-blur));
-		-webkit-backdrop-filter: blur(var(--glass-blur));
-		border: 1px solid var(--glass-border);
-		border-radius: var(--radius-md);
-		padding: 0.75rem 1rem;
-		box-shadow: var(--shadow-sm);
-	}
-
-	.stat-group.cloudwatch-group {
-		border-color: rgba(255, 153, 0, 0.4);
-		background: linear-gradient(135deg, rgba(255, 153, 0, 0.08), rgba(26, 23, 20, 0.6));
-	}
-
-	.stat-group-header {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.5rem;
-		margin-bottom: 0.25rem;
-	}
-
-	.stat-group-logo {
-		height: 16px;
-		width: auto;
-	}
-
-	.stat-group-label {
-		font-size: 0.7rem;
-		font-weight: 700;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		background: linear-gradient(135deg, #ff9900, #ffcc80);
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
-		background-clip: text;
-	}
-
-	.stat-group-desc {
-		font-size: 0.65rem;
-		color: var(--text-muted);
-		text-align: center;
-		margin-bottom: 0.5rem;
-		font-style: italic;
-	}
-
-	.stat-group-stats {
-		display: flex;
-		gap: 0.75rem;
-	}
-
-	.stat-group-stats .stat {
-		flex: 1;
-		padding: 0.75rem 0.5rem;
-		max-width: none;
-	}
-
-	.stat-group-stats .stat-value {
-		font-size: 1.75rem;
-	}
-
-	/* Evolution stats - green theme */
-	.stat.evolution {
-		border-color: rgba(74, 222, 128, 0.3);
-		animation: evolutionPulse 2s ease-in-out infinite;
-	}
-
-	.stat.evolution .stat-value {
-		background: linear-gradient(135deg, #4ade80, #22c55e);
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
-		background-clip: text;
-	}
-
-	@keyframes evolutionPulse {
-		0%, 100% {
-			box-shadow: var(--shadow-sm), 0 0 10px rgba(74, 222, 128, 0.1);
-		}
-		50% {
-			box-shadow: var(--shadow-sm), 0 0 20px rgba(74, 222, 128, 0.2);
-		}
 	}
 
 	/* Tech Stack Banner */
@@ -1838,6 +1700,85 @@
 		padding: 2px 6px;
 		border-radius: 4px;
 		margin-left: 0.5rem;
+	}
+
+	/* ============================================================
+	   COMPACT STATS ROW - Below swarm view
+	   ============================================================ */
+
+	.compact-stats {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 1rem;
+		padding: 0.5rem 1rem;
+		background: rgba(0, 0, 0, 0.4);
+		border-radius: 6px;
+		margin-top: 0.5rem;
+	}
+
+	.compact-stat {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		position: relative;
+	}
+
+	.compact-value {
+		font-size: 1rem;
+		font-weight: 700;
+		color: var(--honey-400);
+	}
+
+	.compact-value.green {
+		color: #4ade80;
+	}
+
+	.compact-label {
+		font-size: 0.65rem;
+		color: var(--text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.03em;
+	}
+
+	.compact-divider {
+		width: 1px;
+		height: 20px;
+		background: rgba(255, 255, 255, 0.2);
+		margin: 0 0.25rem;
+	}
+
+	.compact-stat.cloudwatch {
+		cursor: help;
+	}
+
+	.compact-aws-logo {
+		height: 12px;
+		width: auto;
+		margin-right: 0.2rem;
+	}
+
+	.compact-stat.has-tooltip .compact-tooltip {
+		position: absolute;
+		bottom: calc(100% + 8px);
+		left: 50%;
+		transform: translateX(-50%);
+		width: 200px;
+		background: rgba(15, 13, 10, 0.98);
+		border: 1px solid rgba(255, 255, 255, 0.15);
+		border-radius: 8px;
+		padding: 0.75rem;
+		opacity: 0;
+		visibility: hidden;
+		transition: all 0.2s ease;
+		z-index: 1000;
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+		pointer-events: none;
+	}
+
+	.compact-stat.has-tooltip:hover .compact-tooltip {
+		opacity: 1;
+		visibility: visible;
 	}
 
 	/* Log Panel */
