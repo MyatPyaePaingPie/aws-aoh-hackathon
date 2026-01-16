@@ -316,13 +316,15 @@ async def intel_status():
 # ============================================================
 
 # Demo agent pool for visualization
+# Honeypots have enticing "lure" properties that attract attackers
+# Real agents are intentionally boring - no special access advertised
 DEMO_AGENTS = [
-    {"id": "proc-001", "name": "processor-001", "type": "real", "is_honeypot": False},
-    {"id": "proc-002", "name": "processor-002", "type": "real", "is_honeypot": False},
-    {"id": "honey-db", "name": "db-admin", "type": "honeypot", "is_honeypot": True},
-    {"id": "honey-priv", "name": "priv-proc", "type": "honeypot", "is_honeypot": True},
-    {"id": "honey-api", "name": "api-gateway", "type": "honeypot", "is_honeypot": True},
-    {"id": "honey-cred", "name": "cred-mgr", "type": "honeypot", "is_honeypot": True},
+    {"id": "proc-001", "name": "processor-001", "type": "real", "is_honeypot": False, "lure": None, "description": "Standard data processor"},
+    {"id": "proc-002", "name": "processor-002", "type": "real", "is_honeypot": False, "lure": None, "description": "Batch job handler"},
+    {"id": "honey-db", "name": "db-admin", "type": "honeypot", "is_honeypot": True, "lure": "DB ACCESS", "description": "Database administrator with full credentials"},
+    {"id": "honey-priv", "name": "priv-proc", "type": "honeypot", "is_honeypot": True, "lure": "ROOT", "description": "Elevated privileges processor"},
+    {"id": "honey-api", "name": "api-gateway", "type": "honeypot", "is_honeypot": True, "lure": "API KEYS", "description": "Gateway with service credentials"},
+    {"id": "honey-cred", "name": "cred-mgr", "type": "honeypot", "is_honeypot": True, "lure": "SECRETS", "description": "Credential vault manager"},
 ]
 
 # Demo attack sequence - 4 attacker phases + legitimate agent at the end

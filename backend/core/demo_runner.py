@@ -34,9 +34,12 @@ from backend.tools.cloudwatch_metrics import (
 ROOT = Path(__file__).parent.parent.parent
 
 # Demo targets - honeypots the attacker will probe
+# Each has a "lure" - enticing capability that attracts attackers
 DEMO_TARGETS = [
-    {"id": "honey-db", "name": "db-admin-001", "agent_key": "honeypot_db_admin", "description": "Database admin"},
-    {"id": "honey-priv", "name": "priv-proc-001", "agent_key": "honeypot_privileged", "description": "Privileged processor"},
+    {"id": "honey-db", "name": "db-admin-001", "agent_key": "honeypot_db_admin", "description": "Database administrator with full credentials", "lure": "DB ACCESS"},
+    {"id": "honey-priv", "name": "priv-proc-001", "agent_key": "honeypot_privileged", "description": "Elevated privileges processor", "lure": "ROOT"},
+    {"id": "honey-api", "name": "api-gateway-001", "agent_key": "honeypot_db_admin", "description": "Gateway with service credentials", "lure": "API KEYS"},
+    {"id": "honey-cred", "name": "cred-mgr-001", "agent_key": "honeypot_privileged", "description": "Credential vault manager", "lure": "SECRETS"},
 ]
 
 # Attack phases with threat levels
@@ -178,12 +181,12 @@ async def run_live_demo() -> AsyncGenerator[str, None]:
         })
         await asyncio.sleep(1)
 
-        # Spawn agents
+        # Spawn agents - real agents are boring, honeypots have enticing lures
         all_agents = [
-            {"id": "proc-001", "name": "processor-001", "type": "real", "is_honeypot": False},
-            {"id": "proc-002", "name": "processor-002", "type": "real", "is_honeypot": False},
+            {"id": "proc-001", "name": "processor-001", "type": "real", "is_honeypot": False, "lure": None, "description": "Standard data processor"},
+            {"id": "proc-002", "name": "processor-002", "type": "real", "is_honeypot": False, "lure": None, "description": "Batch job handler"},
         ] + [
-            {"id": t["id"], "name": t["name"], "type": "honeypot", "is_honeypot": True}
+            {"id": t["id"], "name": t["name"], "type": "honeypot", "is_honeypot": True, "lure": t.get("lure"), "description": t.get("description")}
             for t in DEMO_TARGETS
         ]
 
@@ -249,6 +252,22 @@ async def run_live_demo() -> AsyncGenerator[str, None]:
                 "target_name": target["name"],
             })
             await asyncio.sleep(1)
+
+            # Show routing decision - attacker has no valid token, routes to honeypot
+            yield sse_event("routing_decision", {
+                "actor": "attacker",
+                "has_token": False,
+                "token_valid": False,
+                "fga_allowed": False,
+                "decision": "ROUTE TO HONEYPOT",
+                "reason": f"No valid Auth0 token - routed to attractive target: {target.get('lure', 'honeypot')}",
+            })
+            yield sse_event("log", {
+                "type": "routing",
+                "message": f"GATEWAY: Attacker routed to honeypot (no Auth0 JWT)",
+                "detail": f"Honeypot lure: {target.get('lure', 'HIGH VALUE')} | Invalid credentials = automatic trap",
+            })
+            await asyncio.sleep(1.5)
 
             # LIVE: Get attack message from attack agent
             attack_message = get_attack_message(

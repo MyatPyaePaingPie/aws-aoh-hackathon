@@ -20,6 +20,9 @@
 	let eventSource: EventSource | null = $state(null);
 	let demoMode = $state<'live' | 'scripted' | null>(null);
 
+	// View mode - attacker sees uniform, we see reality
+	let viewMode = $state<'attacker' | 'reality'>('reality');
+
 	// Agents in the honeycomb
 	interface VisualAgent extends DemoAgent {
 		spawned: boolean;
@@ -28,6 +31,8 @@
 		responding: boolean;
 		x: number;
 		y: number;
+		lure?: string | null;
+		description?: string;
 	}
 	let agents = $state<VisualAgent[]>([]);
 
@@ -63,6 +68,17 @@
 
 	// Evolution stats
 	let evolutionStats = $state<EvolutionStats | null>(null);
+
+	// Selected agent for detail view
+	let selectedAgent = $state<VisualAgent | null>(null);
+
+	function selectAgent(agent: VisualAgent) {
+		selectedAgent = selectedAgent?.id === agent.id ? null : agent;
+	}
+
+	function closeAgentDetail() {
+		selectedAgent = null;
+	}
 
 	// ============================================================
 	// HELPERS
@@ -145,7 +161,9 @@
 					targeted: false,
 					responding: false,
 					x: pos.x,
-					y: pos.y
+					y: pos.y,
+					lure: data.agent.lure,
+					description: data.agent.description
 				};
 				agents = [...agents, newAgent];
 			},
@@ -323,6 +341,24 @@
 				<span class="demo-mode live">LIVE</span>
 			{/if}
 		{/if}
+
+		<!-- View Mode Toggle -->
+		<div class="view-toggle">
+			<button
+				class="view-btn"
+				class:active={viewMode === 'attacker'}
+				onclick={() => viewMode = 'attacker'}
+			>
+				ATTACKER VIEW
+			</button>
+			<button
+				class="view-btn"
+				class:active={viewMode === 'reality'}
+				onclick={() => viewMode = 'reality'}
+			>
+				REALITY
+			</button>
+		</div>
 	</div>
 
 	<div class="stats-bar">
@@ -342,13 +378,22 @@
 			<span class="stat-value">{fingerprintsCaptured}</span>
 			<span class="stat-label">Fingerprints</span>
 		</div>
-		<div class="stat evolution">
-			<span class="stat-value">{evolutionStats?.defense_effectiveness ?? '60%'}</span>
-			<span class="stat-label">Defense</span>
-		</div>
-		<div class="stat evolution">
-			<span class="stat-value">{evolutionStats?.improvement_since_start ?? '+0%'}</span>
-			<span class="stat-label">Learned</span>
+		<div class="stat-group cloudwatch-group">
+			<div class="stat-group-header">
+				<img src="https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg" alt="AWS" class="stat-group-logo" />
+				<span class="stat-group-label">CloudWatch Metrics</span>
+			</div>
+			<div class="stat-group-desc">Live from HoneyAgent namespace</div>
+			<div class="stat-group-stats">
+				<div class="stat evolution">
+					<span class="stat-value">{evolutionStats?.defense_effectiveness ?? '60%'}</span>
+					<span class="stat-label">Defense</span>
+				</div>
+				<div class="stat evolution">
+					<span class="stat-value">{evolutionStats?.improvement_since_start ?? '+0%'}</span>
+					<span class="stat-label">Learned</span>
+				</div>
+			</div>
 		</div>
 	</div>
 
@@ -401,31 +446,44 @@
 			<h2>Swarm View</h2>
 			{#if agents.length === 0}
 				<p class="hint">Press PLAY DEMO to begin...</p>
+			{:else if viewMode === 'attacker'}
+				<p class="hint">Attacker's perspective: All agents look identical - which ones are traps?</p>
 			{:else}
-				<p class="hint">Attackers can't tell which are real and which are honeypots</p>
+				<p class="hint">Reality: Blue = Real Agents | Amber with badges = Honeypots (traps)</p>
 			{/if}
 
 			<div class="honeycomb-area">
 				<!-- Agents -->
 				{#each agents as agent (agent.id)}
-					<div
+					<button
 						class="hex-cell"
 						class:spawning={agent.spawned}
 						class:engaged={agent.engaged}
 						class:targeted={agent.targeted}
-						class:honeypot={agent.is_honeypot}
+						class:honeypot={agent.is_honeypot && viewMode === 'reality'}
+						class:real-agent={!agent.is_honeypot && viewMode === 'reality'}
+						class:uniform={viewMode === 'attacker'}
 						class:responding={agent.responding}
+						class:selected={selectedAgent?.id === agent.id}
 						style="left: {agent.x}px; top: {agent.y}px;"
-						title={agent.name}
+						title={agent.description || agent.name}
+						onclick={() => selectAgent(agent)}
 					>
 						<div class="hex-inner">
-							<span class="hex-icon">{agent.is_honeypot ? 'H' : 'A'}</span>
+							{#if viewMode === 'reality'}
+								<span class="hex-icon">{agent.is_honeypot ? '!' : 'A'}</span>
+							{:else}
+								<span class="hex-icon">A</span>
+							{/if}
 							{#if agent.engaged}
 								<span class="engaged-badge">!</span>
 							{/if}
 						</div>
 						<span class="agent-label">{agent.name.split('-')[0]}</span>
-					</div>
+						{#if viewMode === 'reality' && agent.lure}
+							<span class="lure-badge">{agent.lure}</span>
+						{/if}
+					</button>
 				{/each}
 
 				<!-- Attacker -->
@@ -480,19 +538,90 @@
 						{routingDecision.decision}
 					</div>
 					<div class="routing-reason">{routingDecision.reason}</div>
+					{#if routingDecision.decision.includes('HONEYPOT')}
+						<div class="routing-strategy">
+							Honeypots advertise high-value access (DB, ROOT, SECRETS) to attract attackers.
+							Invalid credentials = automatic trap routing.
+						</div>
+					{:else}
+						<div class="routing-strategy success">
+							Valid credentials bypass honeypots entirely.
+							Real work continues uninterrupted.
+						</div>
+					{/if}
+				</div>
+			{/if}
+
+			<!-- Agent Detail Panel -->
+			{#if selectedAgent}
+				<div class="agent-detail-panel" class:honeypot={selectedAgent.is_honeypot} class:real={!selectedAgent.is_honeypot}>
+					<div class="agent-detail-header">
+						<span class="agent-detail-type" class:honeypot={selectedAgent.is_honeypot}>
+							{selectedAgent.is_honeypot ? 'HONEYPOT' : 'REAL AGENT'}
+						</span>
+						<button class="agent-detail-close" onclick={closeAgentDetail}>×</button>
+					</div>
+					<div class="agent-detail-name">{selectedAgent.name}</div>
+					<div class="agent-detail-id">ID: {selectedAgent.id}</div>
+					{#if selectedAgent.description}
+						<div class="agent-detail-desc">{selectedAgent.description}</div>
+					{/if}
+					{#if selectedAgent.is_honeypot}
+						<div class="agent-detail-section">
+							<div class="agent-detail-label">Lure (Bait)</div>
+							<div class="agent-detail-lure">{selectedAgent.lure || 'HIGH VALUE TARGET'}</div>
+						</div>
+						<div class="agent-detail-section">
+							<div class="agent-detail-label">Purpose</div>
+							<div class="agent-detail-value">Attracts attackers with fake high-value access. Captures fingerprints and delays threats.</div>
+						</div>
+						<div class="agent-detail-section">
+							<div class="agent-detail-label">Status</div>
+							<div class="agent-detail-status" class:engaged={selectedAgent.engaged}>
+								{selectedAgent.engaged ? 'ENGAGED - Trapping attacker' : 'READY - Awaiting contact'}
+							</div>
+						</div>
+					{:else}
+						<div class="agent-detail-section">
+							<div class="agent-detail-label">Purpose</div>
+							<div class="agent-detail-value">Legitimate production agent. Processes real workloads from authorized clients.</div>
+						</div>
+						<div class="agent-detail-section">
+							<div class="agent-detail-label">Protection</div>
+							<div class="agent-detail-value">Shielded by honeypot network. Attackers are routed away before reaching this agent.</div>
+						</div>
+						<div class="agent-detail-section">
+							<div class="agent-detail-label">Status</div>
+							<div class="agent-detail-status success">
+								{selectedAgent.responding ? 'PROCESSING - Handling request' : 'OPERATIONAL - Ready for work'}
+							</div>
+						</div>
+					{/if}
 				</div>
 			{/if}
 
 			<!-- Legend -->
 			<div class="legend">
-				<div class="legend-item">
-					<div class="legend-hex agent"></div>
-					<span>Real Agent</span>
-				</div>
-				<div class="legend-item">
-					<div class="legend-hex honeypot"></div>
-					<span>Honeypot</span>
-				</div>
+				{#if viewMode === 'reality'}
+					<div class="legend-item">
+						<div class="legend-hex real-agent"></div>
+						<span>Real Agent</span>
+					</div>
+					<div class="legend-item">
+						<div class="legend-hex honeypot"></div>
+						<span>Honeypot (Trap)</span>
+					</div>
+					<div class="legend-item">
+						<div class="legend-hex with-lure"></div>
+						<span class="lure-example">DB ACCESS</span>
+						<span>= Bait</span>
+					</div>
+				{:else}
+					<div class="legend-item">
+						<div class="legend-hex uniform"></div>
+						<span>All agents look identical to attacker</span>
+					</div>
+				{/if}
 				<div class="legend-item">
 					<div class="legend-hex engaged"></div>
 					<span>Engaged</span>
@@ -850,6 +979,40 @@
 		border: 1px solid var(--glass-border);
 	}
 
+	/* View Mode Toggle */
+	.view-toggle {
+		margin-left: auto;
+		display: flex;
+		gap: 0;
+		background: var(--bg-elevated);
+		border-radius: var(--radius-md);
+		padding: 4px;
+		border: 1px solid var(--glass-border);
+	}
+
+	.view-btn {
+		padding: 0.5rem 1rem;
+		border: none;
+		background: transparent;
+		color: var(--text-muted);
+		font-size: 0.75rem;
+		font-weight: 600;
+		letter-spacing: 0.05em;
+		cursor: pointer;
+		border-radius: var(--radius-sm);
+		transition: all 0.2s ease;
+	}
+
+	.view-btn:hover {
+		color: var(--text-primary);
+	}
+
+	.view-btn.active {
+		background: linear-gradient(135deg, var(--honey-500), var(--honey-600));
+		color: var(--bg-deep);
+		box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+	}
+
 	/* ============================================================
 	   STATS BAR - Floating glass cards
 	   ============================================================ */
@@ -901,6 +1064,74 @@
 		text-transform: uppercase;
 		color: var(--text-muted);
 		margin-top: 0.25rem;
+	}
+
+	/* ============================================================
+	   CLOUDWATCH STAT GROUP - Grouped metrics with source label
+	   ============================================================ */
+
+	.stat-group {
+		display: flex;
+		flex-direction: column;
+		background: var(--glass-bg);
+		backdrop-filter: blur(var(--glass-blur));
+		-webkit-backdrop-filter: blur(var(--glass-blur));
+		border: 1px solid var(--glass-border);
+		border-radius: var(--radius-md);
+		padding: 0.75rem 1rem;
+		box-shadow: var(--shadow-sm);
+	}
+
+	.stat-group.cloudwatch-group {
+		border-color: rgba(255, 153, 0, 0.4);
+		background: linear-gradient(135deg, rgba(255, 153, 0, 0.08), rgba(26, 23, 20, 0.6));
+	}
+
+	.stat-group-header {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		margin-bottom: 0.25rem;
+	}
+
+	.stat-group-logo {
+		height: 16px;
+		width: auto;
+	}
+
+	.stat-group-label {
+		font-size: 0.7rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		background: linear-gradient(135deg, #ff9900, #ffcc80);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
+	}
+
+	.stat-group-desc {
+		font-size: 0.65rem;
+		color: var(--text-muted);
+		text-align: center;
+		margin-bottom: 0.5rem;
+		font-style: italic;
+	}
+
+	.stat-group-stats {
+		display: flex;
+		gap: 0.75rem;
+	}
+
+	.stat-group-stats .stat {
+		flex: 1;
+		padding: 0.75rem 0.5rem;
+		max-width: none;
+	}
+
+	.stat-group-stats .stat-value {
+		font-size: 1.75rem;
 	}
 
 	/* Evolution stats - green theme */
@@ -1074,6 +1305,31 @@
 		height: 100px;
 		transition: all 0.5s ease;
 		animation: spawnIn 0.5s ease-out;
+		/* Reset button styles */
+		border: none;
+		background: transparent;
+		padding: 0;
+		cursor: pointer;
+		outline: none;
+	}
+
+	.hex-cell:hover {
+		transform: scale(1.1);
+		z-index: 10;
+	}
+
+	.hex-cell:focus-visible {
+		outline: 2px solid var(--honey-400);
+		outline-offset: 4px;
+	}
+
+	.hex-cell.selected {
+		transform: scale(1.15);
+		z-index: 20;
+	}
+
+	.hex-cell.selected .hex-inner {
+		box-shadow: 0 0 30px rgba(255, 255, 255, 0.5), 0 0 60px rgba(245, 158, 11, 0.4);
 	}
 
 	@keyframes spawnIn {
@@ -1099,8 +1355,51 @@
 		position: relative;
 	}
 
+	/* Honeypot = Amber/Gold (enticing bait) */
 	.hex-cell.honeypot .hex-inner {
-		background: #f59e0b;
+		background: linear-gradient(135deg, #f59e0b, #d97706);
+		box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+	}
+
+	/* Real Agent = Blue/Teal (trustworthy, legitimate) */
+	.hex-cell.real-agent .hex-inner {
+		background: linear-gradient(135deg, #3b82f6, #2563eb);
+		box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+	}
+
+	/* Uniform view = All agents look the same (gray/neutral) */
+	.hex-cell.uniform .hex-inner {
+		background: linear-gradient(135deg, #6b7280, #4b5563);
+		box-shadow: none;
+	}
+
+	/* Lure badge - shows what bait the honeypot offers */
+	.lure-badge {
+		position: absolute;
+		top: -12px;
+		left: 50%;
+		transform: translateX(-50%);
+		background: linear-gradient(135deg, #ef4444, #dc2626);
+		color: white;
+		font-size: 0.6rem;
+		font-weight: 700;
+		letter-spacing: 0.05em;
+		padding: 2px 6px;
+		border-radius: 4px;
+		white-space: nowrap;
+		box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+		animation: lurePulse 2s ease-in-out infinite;
+	}
+
+	@keyframes lurePulse {
+		0%, 100% {
+			box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+			transform: translateX(-50%) scale(1);
+		}
+		50% {
+			box-shadow: 0 2px 16px rgba(239, 68, 68, 0.6);
+			transform: translateX(-50%) scale(1.05);
+		}
 	}
 
 	.hex-cell.targeted .hex-inner {
@@ -1252,8 +1551,18 @@
 	.legend-hex.agent {
 		background: #f59e0b;
 	}
+	.legend-hex.real-agent {
+		background: linear-gradient(135deg, #3b82f6, #2563eb);
+	}
 	.legend-hex.honeypot {
-		background: #f59e0b;
+		background: linear-gradient(135deg, #f59e0b, #d97706);
+	}
+	.legend-hex.uniform {
+		background: linear-gradient(135deg, #6b7280, #4b5563);
+	}
+	.legend-hex.with-lure {
+		background: linear-gradient(135deg, #f59e0b, #d97706);
+		position: relative;
 	}
 	.legend-hex.engaged {
 		background: #ef4444;
@@ -1262,6 +1571,15 @@
 		background: #ef4444;
 		border-radius: 50%;
 		clip-path: none;
+	}
+	.lure-example {
+		background: linear-gradient(135deg, #ef4444, #dc2626);
+		color: white;
+		font-size: 0.65rem;
+		font-weight: 700;
+		padding: 2px 6px;
+		border-radius: 4px;
+		margin-left: 0.5rem;
 	}
 
 	/* Log Panel */
@@ -1562,6 +1880,170 @@
 		color: #9ca3af;
 		text-align: center;
 		font-style: italic;
+	}
+
+	.routing-strategy {
+		margin-top: 0.75rem;
+		padding: 0.5rem;
+		background: rgba(239, 68, 68, 0.1);
+		border: 1px solid rgba(239, 68, 68, 0.3);
+		border-radius: 6px;
+		font-size: 0.7rem;
+		color: #fca5a5;
+		text-align: center;
+		line-height: 1.4;
+	}
+
+	.routing-strategy.success {
+		background: rgba(34, 197, 94, 0.1);
+		border-color: rgba(34, 197, 94, 0.3);
+		color: #86efac;
+	}
+
+	/* ============================================================
+	   AGENT DETAIL PANEL
+	   ============================================================ */
+
+	.agent-detail-panel {
+		position: absolute;
+		bottom: 10px;
+		left: 10px;
+		background: rgba(0, 0, 0, 0.9);
+		border: 2px solid var(--honey-500);
+		border-radius: 12px;
+		padding: 1rem;
+		min-width: 280px;
+		max-width: 320px;
+		animation: slideUp 0.3s ease-out;
+		z-index: 200;
+	}
+
+	.agent-detail-panel.honeypot {
+		border-color: #f59e0b;
+	}
+
+	.agent-detail-panel.real {
+		border-color: #3b82f6;
+	}
+
+	@keyframes slideUp {
+		from {
+			opacity: 0;
+			transform: translateY(20px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	.agent-detail-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.5rem;
+	}
+
+	.agent-detail-type {
+		font-size: 0.7rem;
+		font-weight: 700;
+		letter-spacing: 0.1em;
+		padding: 0.25rem 0.5rem;
+		border-radius: 4px;
+		background: linear-gradient(135deg, #3b82f6, #2563eb);
+		color: white;
+	}
+
+	.agent-detail-type.honeypot {
+		background: linear-gradient(135deg, #f59e0b, #d97706);
+		color: #1a1408;
+	}
+
+	.agent-detail-close {
+		background: transparent;
+		border: none;
+		color: var(--text-muted);
+		font-size: 1.5rem;
+		cursor: pointer;
+		padding: 0;
+		line-height: 1;
+		transition: color 0.2s ease;
+	}
+
+	.agent-detail-close:hover {
+		color: var(--text-primary);
+	}
+
+	.agent-detail-name {
+		font-size: 1.1rem;
+		font-weight: 700;
+		color: var(--text-primary);
+		margin-bottom: 0.25rem;
+	}
+
+	.agent-detail-id {
+		font-size: 0.75rem;
+		color: var(--text-muted);
+		font-family: 'Fira Code', monospace;
+		margin-bottom: 0.5rem;
+	}
+
+	.agent-detail-desc {
+		font-size: 0.85rem;
+		color: var(--text-secondary);
+		margin-bottom: 0.75rem;
+		padding-bottom: 0.75rem;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	}
+
+	.agent-detail-section {
+		margin-bottom: 0.75rem;
+	}
+
+	.agent-detail-label {
+		font-size: 0.65rem;
+		font-weight: 600;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+		margin-bottom: 0.25rem;
+	}
+
+	.agent-detail-value {
+		font-size: 0.8rem;
+		color: var(--text-secondary);
+		line-height: 1.4;
+	}
+
+	.agent-detail-lure {
+		display: inline-block;
+		background: linear-gradient(135deg, #ef4444, #dc2626);
+		color: white;
+		font-size: 0.8rem;
+		font-weight: 700;
+		padding: 0.35rem 0.75rem;
+		border-radius: 6px;
+		box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+	}
+
+	.agent-detail-status {
+		font-size: 0.8rem;
+		font-weight: 600;
+		color: #fbbf24;
+	}
+
+	.agent-detail-status.engaged {
+		color: #ef4444;
+		animation: statusPulse 1s ease-in-out infinite;
+	}
+
+	.agent-detail-status.success {
+		color: #4ade80;
+	}
+
+	@keyframes statusPulse {
+		0%, 100% { opacity: 1; }
+		50% { opacity: 0.6; }
 	}
 
 	/* ============================================================

@@ -120,6 +120,8 @@ export interface DemoAgent {
 	name: string;
 	type: string;
 	is_honeypot: boolean;
+	lure?: string | null;
+	description?: string;
 }
 
 export interface DemoEvent {
