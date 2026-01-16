@@ -1202,12 +1202,14 @@
 		border: 1px solid rgba(255, 255, 255, 0.1);
 		border-radius: var(--radius-md);
 		margin-bottom: 1.5rem;
+		position: relative;
 	}
 
 	.tech-section {
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
+		overflow: visible; /* Ensure tooltips aren't clipped */
 	}
 
 	.tech-logo {
@@ -1225,6 +1227,7 @@
 		flex-direction: column;
 		align-items: center;
 		gap: 0.2rem;
+		overflow: visible; /* Ensure tooltips aren't clipped */
 	}
 
 	.tech-badge {
@@ -1307,10 +1310,11 @@
 
 	.tech-tooltip {
 		position: absolute;
-		bottom: calc(100% + 12px);
+		top: calc(100% + 12px); /* Changed to appear below */
 		left: 50%;
 		transform: translateX(-50%);
 		width: 340px;
+		max-width: 90vw; /* Prevent overflow on small screens */
 		background: rgba(15, 13, 10, 0.98);
 		border: 1px solid rgba(255, 255, 255, 0.15);
 		border-radius: 12px;
@@ -1318,7 +1322,7 @@
 		opacity: 0;
 		visibility: hidden;
 		transition: all 0.2s ease;
-		z-index: 1000;
+		z-index: 10000; /* Higher z-index to ensure it's always on top */
 		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
 		pointer-events: none;
 	}
@@ -1331,12 +1335,12 @@
 	.tech-tooltip::after {
 		content: '';
 		position: absolute;
-		bottom: -8px;
+		top: -8px; /* Flipped to point upward */
 		left: 50%;
 		transform: translateX(-50%);
-		border-width: 8px 8px 0 8px;
+		border-width: 0 8px 8px 8px; /* Flipped border to point upward */
 		border-style: solid;
-		border-color: rgba(15, 13, 10, 0.98) transparent transparent transparent;
+		border-color: transparent transparent rgba(15, 13, 10, 0.98) transparent; /* Flipped colors */
 	}
 
 	.tooltip-title {
