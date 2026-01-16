@@ -455,6 +455,37 @@
 					</div>
 				</div>
 			</div>
+			<div class="tech-item has-tooltip">
+				<span class="tech-badge cloudwatch">CloudWatch</span>
+				<span class="tech-desc">Metrics</span>
+				<div class="tech-tooltip">
+					<div class="tooltip-title">CloudWatch - System Metrics & Evolution</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Namespace:</span>
+						<code>HoneyAgent</code>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">File:</span>
+						<code>backend/api/main.py</code>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Function:</span>
+						<span>Publishes real-time metrics from honeypot system evolution. Tracks defense effectiveness and learning improvements across attack campaigns.</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Metrics tracked:</span>
+						<span>defense_effectiveness (%), improvement_since_start (%), honeypot_engagement_rate, fingerprints_captured</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Dashboard:</span>
+						<span>Live metrics visible in stats bar above. Updates every evolution cycle.</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Used for:</span>
+						<span>Monitoring system performance, detecting evolution patterns, alerting on anomalies</span>
+					</div>
+				</div>
+			</div>
 		</div>
 		<div class="tech-divider"></div>
 		<div class="tech-section">
@@ -1351,6 +1382,11 @@
 	.tech-badge.s3 {
 		background: linear-gradient(135deg, #3b82f6, #60a5fa);
 		color: #fff;
+	}
+
+	.tech-badge.cloudwatch {
+		background: linear-gradient(135deg, #ff9900, #ffb84d);
+		color: #232f3e;
 	}
 
 	.tech-badge.jwt {
