@@ -230,10 +230,7 @@ export interface IntelQueryResponse {
 	summary?: string;
 }
 
-/**
- * Connect to demo SSE stream
- */
-export function connectToDemo(handlers: {
+export type DemoHandlers = {
 	onStart?: (data: DemoStartEvent) => void;
 	onAgentSpawn?: (data: AgentSpawnEvent) => void;
 	onAttackerSpawn?: () => void;
@@ -248,9 +245,12 @@ export function connectToDemo(handlers: {
 	onRoutingDecision?: (data: RoutingDecisionEvent) => void;
 	onLegitimateRequest?: (data: LegitimateRequestEvent) => void;
 	onRealAgentRespond?: (data: RealAgentRespondEvent) => void;
-}): EventSource {
-	const eventSource = new EventSource(`${BASE}/demo/events`);
+};
 
+/**
+ * Setup event listeners on an EventSource
+ */
+function setupDemoEventListeners(eventSource: EventSource, handlers: DemoHandlers): void {
 	eventSource.addEventListener('demo_start', (e) => {
 		handlers.onStart?.(JSON.parse(e.data));
 	});
@@ -303,20 +303,107 @@ export function connectToDemo(handlers: {
 	eventSource.addEventListener('real_agent_respond', (e) => {
 		handlers.onRealAgentRespond?.(JSON.parse(e.data));
 	});
+}
 
+/**
+ * Connect to LIVE demo (real agent-to-agent) with fallback to scripted
+ *
+ * Tries /demo/live first. If it fails within 3 seconds, falls back to /demo/events
+ */
+export function connectToDemo(handlers: DemoHandlers): EventSource {
+	let eventSource: EventSource;
+	let fallbackTriggered = false;
+	let hasReceivedEvent = false;
+
+	// Try live demo first
+	eventSource = new EventSource(`${BASE}/demo/live`);
+
+	// Set up fallback timer - if no event received in 3 seconds, switch to scripted
+	const fallbackTimer = setTimeout(() => {
+		if (!hasReceivedEvent && !fallbackTriggered) {
+			console.log('[HoneyAgent] Live demo not responding, falling back to scripted demo');
+			fallbackTriggered = true;
+			eventSource.close();
+			eventSource = new EventSource(`${BASE}/demo/events`);
+			setupDemoEventListeners(eventSource, handlers);
+		}
+	}, 3000);
+
+	// Track when we receive the first event
+	const onFirstEvent = () => {
+		if (!hasReceivedEvent) {
+			hasReceivedEvent = true;
+			clearTimeout(fallbackTimer);
+			console.log('[HoneyAgent] Live demo connected');
+		}
+	};
+
+	// Wrap handlers to detect first event
+	const wrappedHandlers: DemoHandlers = {
+		...handlers,
+		onStart: (data) => {
+			onFirstEvent();
+			handlers.onStart?.(data);
+		},
+		onAgentSpawn: (data) => {
+			onFirstEvent();
+			handlers.onAgentSpawn?.(data);
+		},
+		onLog: (data) => {
+			onFirstEvent();
+			handlers.onLog?.(data);
+		}
+	};
+
+	setupDemoEventListeners(eventSource, wrappedHandlers);
+
+	// Handle connection errors - fall back to scripted
 	eventSource.onerror = (e) => {
-		handlers.onError?.(e);
+		if (!fallbackTriggered && !hasReceivedEvent) {
+			console.log('[HoneyAgent] Live demo error, falling back to scripted demo');
+			fallbackTriggered = true;
+			clearTimeout(fallbackTimer);
+			eventSource.close();
+			eventSource = new EventSource(`${BASE}/demo/events`);
+			setupDemoEventListeners(eventSource, handlers);
+			eventSource.onerror = (e) => handlers.onError?.(e);
+		} else {
+			handlers.onError?.(e);
+		}
 	};
 
 	return eventSource;
 }
 
 /**
- * Stop the running demo
+ * Connect to scripted demo SSE stream (legacy/fallback)
+ */
+export function connectToScriptedDemo(handlers: DemoHandlers): EventSource {
+	const eventSource = new EventSource(`${BASE}/demo/events`);
+	setupDemoEventListeners(eventSource, handlers);
+	eventSource.onerror = (e) => handlers.onError?.(e);
+	return eventSource;
+}
+
+/**
+ * Stop the running demo (tries both live and scripted endpoints)
  */
 export async function stopDemo(): Promise<{ status: string }> {
-	const res = await fetch(`${BASE}/demo/stop`, { method: 'POST' });
-	return res.json();
+	// Stop both - one will succeed, other will 404 (which is fine)
+	const [liveRes, scriptedRes] = await Promise.allSettled([
+		fetch(`${BASE}/demo/live/stop`, { method: 'POST' }),
+		fetch(`${BASE}/demo/stop`, { method: 'POST' })
+	]);
+
+	// Return whichever succeeded
+	if (liveRes.status === 'fulfilled' && liveRes.value.ok) {
+		return liveRes.value.json();
+	}
+	if (scriptedRes.status === 'fulfilled' && scriptedRes.value.ok) {
+		return scriptedRes.value.json();
+	}
+
+	return { status: 'stopped' };
 }
 
 /**

@@ -714,21 +714,96 @@ async def demo_status():
 
 
 # ============================================================
+# LIVE DEMO ENDPOINTS (Real agent-to-agent interaction)
+# ============================================================
+
+@app.get("/demo/live")
+async def live_demo_events():
+    """
+    LIVE Demo SSE endpoint - Real agent-to-agent combat.
+
+    Unlike /demo/events which uses partially scripted responses,
+    this endpoint runs the actual attack agent against
+    real honeypot agents. No fake LLM calls - every response
+    is generated dynamically.
+
+    Streams the same event types as /demo/events but
+    all interactions are live agent-to-agent.
+    """
+    from backend.core.demo_runner import run_live_demo
+
+    return StreamingResponse(
+        run_live_demo(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+
+@app.post("/demo/live/stop")
+async def stop_live_demo():
+    """Stop the live demo."""
+    from backend.core.demo_runner import stop_demo
+    stop_demo()
+    return {"status": "stopping"}
+
+
+@app.get("/demo/live/status")
+async def live_demo_status():
+    """Check if live demo is running."""
+    from backend.core.demo_runner import is_demo_running
+    return {"running": is_demo_running(), "mode": "LIVE"}
+
+
+@app.get("/attacks")
+async def get_attacks():
+    """
+    Get attack log from the live demo.
+
+    Returns the attack agent's recorded actions.
+    """
+    from pathlib import Path
+    import json
+
+    log_file = Path(__file__).parent.parent.parent / "logs" / "attacks.jsonl"
+
+    if not log_file.exists():
+        return {"attacks": []}
+
+    attacks = []
+    try:
+        with open(log_file) as f:
+            for line in f:
+                try:
+                    attacks.append(json.loads(line.strip()))
+                except json.JSONDecodeError:
+                    continue
+        return {"total": len(attacks), "attacks": attacks[-50:]}
+    except Exception:
+        return {"attacks": []}
+
+
+# ============================================================
 # STARTUP
 # ============================================================
 
 @app.on_event("startup")
 async def startup_event():
     """Log startup."""
-    print("🍯 HoneyAgent API started")
-    print("📡 POST /agent/request - Main endpoint")
-    print("💚 GET /health - Health check")
-    print("👀 GET /agents/status - Swarm status")
-    print("🔍 GET /fingerprints - Recent fingerprints")
-    print("🎬 GET /demo/events - Demo SSE stream")
-    print("📊 GET /api/evolution - Defense evolution stats")
-    print("📈 GET /api/metrics/status - CloudWatch metrics status")
-    print("🧠 GET /api/intel/query - Query attack intelligence (Bedrock KB)")
+    print("HoneyAgent API started")
+    print("POST /agent/request - Main endpoint")
+    print("GET /health - Health check")
+    print("GET /agents/status - Swarm status")
+    print("GET /fingerprints - Recent fingerprints")
+    print("GET /demo/events - Scripted demo SSE stream")
+    print("GET /demo/live - LIVE agent-vs-agent demo (no scripts)")
+    print("GET /attacks - Attack agent log")
+    print("GET /api/evolution - Defense evolution stats")
+    print("GET /api/metrics/status - CloudWatch metrics status")
+    print("GET /api/intel/query - Query attack intelligence (Bedrock KB)")
 
 
 # ============================================================

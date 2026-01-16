@@ -18,6 +18,7 @@
 	let demoRunning = $state(false);
 	let demoComplete = $state(false);
 	let eventSource: EventSource | null = $state(null);
+	let demoMode = $state<'live' | 'scripted' | null>(null);
 
 	// Agents in the honeycomb
 	interface VisualAgent extends DemoAgent {
@@ -122,10 +123,17 @@
 		routingDecision = null;
 		currentActor = null;
 		demoRunning = true;
+		demoMode = null; // Will be set when we detect the mode
 
 		eventSource = connectToDemo({
-			onStart: () => {
-				// Just visual feedback, log comes separately
+			onStart: (data) => {
+				// Detect mode from the start event
+				const startData = data as { mode?: string };
+				if (startData.mode === 'LIVE') {
+					demoMode = 'live';
+				} else {
+					demoMode = 'scripted';
+				}
 			},
 
 			onAgentSpawn: (data) => {
@@ -259,6 +267,7 @@
 		evolutionStats = null;
 		routingDecision = null;
 		currentActor = null;
+		demoMode = null;
 	}
 
 	// ============================================================
@@ -297,11 +306,22 @@
 			<button class="demo-btn play" onclick={startDemo}>PLAY DEMO</button>
 		{:else if demoRunning}
 			<button class="demo-btn stop" onclick={handleStopDemo}>STOP</button>
-			<span class="demo-status">Demo running...</span>
+			{#if demoMode === 'live'}
+				<span class="demo-mode live">LIVE</span>
+				<span class="demo-status">Real agent-to-agent combat</span>
+			{:else if demoMode === 'scripted'}
+				<span class="demo-mode scripted">SCRIPTED</span>
+				<span class="demo-status">Fallback mode</span>
+			{:else}
+				<span class="demo-status">Connecting...</span>
+			{/if}
 		{:else}
 			<button class="demo-btn play" onclick={startDemo}>REPLAY</button>
 			<button class="demo-btn reset" onclick={resetDemo}>RESET</button>
 			<span class="demo-status complete">Demo complete!</span>
+			{#if demoMode === 'live'}
+				<span class="demo-mode live">LIVE</span>
+			{/if}
 		{/if}
 	</div>
 
@@ -793,6 +813,37 @@
 		color: var(--safe);
 		font-weight: 600;
 		font-style: normal;
+	}
+
+	.demo-mode {
+		padding: 0.4rem 0.8rem;
+		border-radius: var(--radius-sm);
+		font-size: 0.75rem;
+		font-weight: 700;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+	}
+
+	.demo-mode.live {
+		background: linear-gradient(135deg, #22c55e, #16a34a);
+		color: white;
+		box-shadow: 0 0 12px rgba(34, 197, 94, 0.5);
+		animation: livePulse 1.5s ease-in-out infinite;
+	}
+
+	@keyframes livePulse {
+		0%, 100% {
+			box-shadow: 0 0 12px rgba(34, 197, 94, 0.5);
+		}
+		50% {
+			box-shadow: 0 0 20px rgba(34, 197, 94, 0.8);
+		}
+	}
+
+	.demo-mode.scripted {
+		background: var(--bg-elevated);
+		color: var(--text-muted);
+		border: 1px solid var(--glass-border);
 	}
 
 	/* ============================================================
