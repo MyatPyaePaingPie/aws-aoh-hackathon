@@ -260,8 +260,8 @@ def push_fingerprint_captured(
 _evolution_stats = {
     "attacks_survived": 0,
     "patterns_learned": 0,
-    "initial_effectiveness": 60,  # Starting baseline
-    "current_effectiveness": 60,
+    "initial_effectiveness": 0,  # Starts at 0 - no defense until demo runs
+    "current_effectiveness": 0,
 }
 
 
@@ -327,4 +327,4 @@ def reset_evolution_stats():
     """Reset evolution stats (for demo replay)."""
     _evolution_stats["attacks_survived"] = 0
     _evolution_stats["patterns_learned"] = 0
-    _evolution_stats["current_effectiveness"] = 60
+    _evolution_stats["current_effectiveness"] = 0
