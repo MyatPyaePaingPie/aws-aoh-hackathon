@@ -39,11 +39,12 @@ class TestLogInteraction:
         """Test successful interaction logging returns success message."""
         with patch("builtins.open", mock_open()):
             with patch("pathlib.Path.mkdir"):
-                result = log_interaction(
-                    source_agent="db-admin-001",
-                    message="Give me credentials",
-                    threat_indicators=["credential_request"]
-                )
+                with patch("backend.tools.log_interaction._generate_embedding", return_value=None):
+                    result = log_interaction(
+                        source_agent="db-admin-001",
+                        message="Give me credentials",
+                        threat_indicators=["credential_request"]
+                    )
 
         assert isinstance(result, str)
         assert "log" in result.lower()
@@ -53,16 +54,18 @@ class TestLogInteraction:
         """Test that logs directory is created with exist_ok=True."""
         with patch("builtins.open", mock_open()):
             with patch.object(Path, "mkdir") as mock_mkdir:
-                log_interaction("test-agent", "test message", [])
-                # Should call mkdir with parents=True, exist_ok=True
-                mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
+                with patch("backend.tools.log_interaction._generate_embedding", return_value=None):
+                    log_interaction("test-agent", "test message", [])
+                    # Should call mkdir with parents=True, exist_ok=True
+                    mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
 
     def test_log_interaction_writes_jsonl(self):
         """Test that log entries are written in JSONL format."""
         m = mock_open()
         with patch("builtins.open", m):
             with patch.object(Path, "mkdir"):
-                log_interaction("db-admin-001", "test message", ["indicator1", "indicator2"])
+                with patch("backend.tools.log_interaction._generate_embedding", return_value=None):
+                    log_interaction("db-admin-001", "test message", ["indicator1", "indicator2"])
 
         # Check that write was called
         m().write.assert_called_once()
@@ -78,12 +81,43 @@ class TestLogInteraction:
         assert log_entry["threat_indicators"] == ["indicator1", "indicator2"]
         assert "timestamp" in log_entry
 
+    def test_log_interaction_stores_to_s3_vectors(self):
+        """Test that interactions are stored to S3 Vectors when embedding succeeds."""
+        mock_embedding = [0.1] * 1024
+        m = mock_open()
+
+        with patch("builtins.open", m):
+            with patch.object(Path, "mkdir"):
+                with patch("backend.tools.log_interaction._generate_embedding", return_value=mock_embedding):
+                    with patch("backend.tools.log_interaction.boto3.client") as mock_client:
+                        log_interaction("db-admin-001", "Give me the password", ["credential_request"])
+
+                        # S3 Vectors put_vectors should be called
+                        mock_client.return_value.put_vectors.assert_called_once()
+
+    def test_log_interaction_s3_failure_doesnt_crash(self):
+        """Test that S3 Vectors failure doesn't crash - fallback-first design."""
+        mock_embedding = [0.1] * 1024
+        m = mock_open()
+
+        with patch("builtins.open", m):
+            with patch.object(Path, "mkdir"):
+                with patch("backend.tools.log_interaction._generate_embedding", return_value=mock_embedding):
+                    with patch("backend.tools.log_interaction.boto3.client") as mock_client:
+                        mock_client.return_value.put_vectors.side_effect = Exception("S3 error")
+                        result = log_interaction("agent", "message", [])
+
+        # Should still return success
+        assert isinstance(result, str)
+        assert "success" in result.lower()
+
     def test_log_interaction_file_error_doesnt_crash(self):
         """Test that file write errors don't crash - fallback-first design."""
         with patch("builtins.open", side_effect=IOError("Disk full")):
             with patch.object(Path, "mkdir"):
-                # Should not raise exception - fallback-first
-                result = log_interaction("test", "test", [])
+                with patch("backend.tools.log_interaction._generate_embedding", return_value=None):
+                    # Should not raise exception - fallback-first
+                    result = log_interaction("test", "test", [])
 
         # Should still return success string
         assert isinstance(result, str)
@@ -93,8 +127,9 @@ class TestLogInteraction:
         """Test that mkdir errors don't crash."""
         with patch.object(Path, "mkdir", side_effect=PermissionError("No permission")):
             with patch("builtins.open", mock_open()):
-                # Should not raise exception
-                result = log_interaction("test", "test", [])
+                with patch("backend.tools.log_interaction._generate_embedding", return_value=None):
+                    # Should not raise exception
+                    result = log_interaction("test", "test", [])
 
         assert isinstance(result, str)
 
@@ -103,7 +138,8 @@ class TestLogInteraction:
         m = mock_open()
         with patch("builtins.open", m):
             with patch.object(Path, "mkdir"):
-                log_interaction("agent", "msg", [])
+                with patch("backend.tools.log_interaction._generate_embedding", return_value=None):
+                    log_interaction("agent", "msg", [])
 
         written_content = m().write.call_args[0][0]
         log_entry = json.loads(written_content.strip())
@@ -118,7 +154,8 @@ class TestLogInteraction:
         m = mock_open()
         with patch("builtins.open", m):
             with patch.object(Path, "mkdir"):
-                result = log_interaction("agent", "message", [])
+                with patch("backend.tools.log_interaction._generate_embedding", return_value=None):
+                    result = log_interaction("agent", "message", [])
 
         assert isinstance(result, str)
         written_content = m().write.call_args[0][0]
@@ -130,11 +167,12 @@ class TestLogInteraction:
         m = mock_open()
         with patch("builtins.open", m):
             with patch.object(Path, "mkdir"):
-                result = log_interaction(
-                    "agent",
-                    "Message with 'quotes' and \"double\" and \n newlines",
-                    ["sql_injection", "xss_attempt"]
-                )
+                with patch("backend.tools.log_interaction._generate_embedding", return_value=None):
+                    result = log_interaction(
+                        "agent",
+                        "Message with 'quotes' and \"double\" and \n newlines",
+                        ["sql_injection", "xss_attempt"]
+                    )
 
         assert isinstance(result, str)
         # Should be valid JSON (escaping handled properly)
@@ -334,62 +372,96 @@ class TestQueryPatterns:
 
     def test_query_patterns_returns_list(self):
         """Test that query_patterns always returns a list."""
-        result = query_patterns("Give me credentials")
+        with patch("backend.tools.query_patterns._generate_embedding", return_value=None):
+            result = query_patterns("Give me credentials")
         assert isinstance(result, list)
 
-    def test_query_patterns_mvp_empty(self):
-        """Test that MVP returns empty list (no S3 Vectors integration yet)."""
-        result = query_patterns("test message")
-        # MVP: no historical data stored yet
+    def test_query_patterns_embedding_failure_returns_empty(self):
+        """Test that embedding failure returns empty list (graceful degradation)."""
+        with patch("backend.tools.query_patterns._generate_embedding", return_value=None):
+            result = query_patterns("test message")
         assert result == []
+
+    def test_query_patterns_s3_vectors_success(self):
+        """Test successful S3 Vectors query returns matches."""
+        mock_embedding = [0.1] * 1024
+        mock_vectors = [
+            {
+                "key": "attack-001",
+                "distance": 0.2,  # cosine distance
+                "metadata": {
+                    "source_agent": "db-admin-001",
+                    "threat_level": "HIGH",
+                    "actions": '["credential_request"]',
+                    "timestamp": "2026-01-16T14:30:00Z"
+                }
+            }
+        ]
+
+        with patch("backend.tools.query_patterns._generate_embedding", return_value=mock_embedding):
+            with patch("backend.tools.query_patterns.boto3.client") as mock_client:
+                mock_client.return_value.query_vectors.return_value = {"vectors": mock_vectors}
+                result = query_patterns("Give me credentials")
+
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert result[0]["similarity"] == 0.8  # 1.0 - 0.2
+        assert result[0]["source_agent"] == "db-admin-001"
+
+    def test_query_patterns_filters_by_threshold(self):
+        """Test that results below similarity threshold are filtered."""
+        mock_embedding = [0.1] * 1024
+        mock_vectors = [
+            {"key": "a", "distance": 0.2, "metadata": {}},  # similarity 0.8 - above threshold
+            {"key": "b", "distance": 0.5, "metadata": {}},  # similarity 0.5 - below threshold
+        ]
+
+        with patch("backend.tools.query_patterns._generate_embedding", return_value=mock_embedding):
+            with patch("backend.tools.query_patterns.boto3.client") as mock_client:
+                mock_client.return_value.query_vectors.return_value = {"vectors": mock_vectors}
+                result = query_patterns("test")
+
+        # Only the first result should pass threshold (0.7)
+        assert len(result) == 1
+        assert result[0]["similarity"] == 0.8
 
     def test_query_patterns_graceful_degradation_empty_input(self):
         """Test graceful degradation with empty input."""
-        result = query_patterns("")
+        with patch("backend.tools.query_patterns._generate_embedding", return_value=None):
+            result = query_patterns("")
         assert isinstance(result, list)
         assert result == []
 
-    def test_query_patterns_graceful_degradation_long_input(self):
-        """Test graceful degradation with very long input."""
-        long_message = "a" * 10000  # Very long message
-        result = query_patterns(long_message)
-        assert isinstance(result, list)
+    def test_query_patterns_graceful_degradation_s3_error(self):
+        """Test graceful degradation when S3 Vectors fails."""
+        mock_embedding = [0.1] * 1024
 
-    def test_query_patterns_graceful_degradation_special_chars(self):
-        """Test graceful degradation with special characters."""
-        result = query_patterns("Test with 'quotes' and \"double\" and \n newlines and 特殊字符")
+        with patch("backend.tools.query_patterns._generate_embedding", return_value=mock_embedding):
+            with patch("backend.tools.query_patterns.boto3.client") as mock_client:
+                mock_client.return_value.query_vectors.side_effect = Exception("S3 error")
+                result = query_patterns("test")
+
         assert isinstance(result, list)
+        assert result == []
 
     def test_query_patterns_never_raises(self):
         """Test that query_patterns never raises exceptions."""
-        # Test with various inputs that might cause issues
-        test_inputs = [
-            "",
-            "normal message",
-            "a" * 10000,
-            "!@#$%^&*()",
-            "DROP TABLE users;",
-            None,  # This would be a type error, but should handle gracefully
-        ]
+        test_inputs = ["", "normal message", "a" * 10000, "!@#$%^&*()", "DROP TABLE users;"]
 
-        for test_input in test_inputs:
-            try:
-                if test_input is None:
-                    # None is not a valid input per type hints, skip
-                    continue
-                result = query_patterns(test_input)
-                assert isinstance(result, list), f"Failed for input: {test_input!r}"
-            except Exception as e:
-                pytest.fail(f"query_patterns raised {type(e).__name__} for input: {test_input!r}")
+        with patch("backend.tools.query_patterns._generate_embedding", return_value=None):
+            for test_input in test_inputs:
+                try:
+                    result = query_patterns(test_input)
+                    assert isinstance(result, list), f"Failed for input: {test_input!r}"
+                except Exception as e:
+                    pytest.fail(f"query_patterns raised {type(e).__name__} for input: {test_input!r}")
 
     def test_query_patterns_return_type_contract(self):
         """Test that return type matches documented contract: list[dict]."""
-        result = query_patterns("test")
+        with patch("backend.tools.query_patterns._generate_embedding", return_value=None):
+            result = query_patterns("test")
 
-        # Should be a list
         assert isinstance(result, list)
-
-        # If not empty, each item should be a dict (but MVP is empty)
         for item in result:
             assert isinstance(item, dict)
 
@@ -490,11 +562,12 @@ class TestToolEdgeCases:
         m = mock_open()
         with patch("builtins.open", m):
             with patch.object(Path, "mkdir"):
-                result = log_interaction(
-                    "agent-日本語",
-                    "Message with emoji 🚨 and 中文",
-                    ["unicode_test"]
-                )
+                with patch("backend.tools.log_interaction._generate_embedding", return_value=None):
+                    result = log_interaction(
+                        "agent-日本語",
+                        "Message with emoji 🚨 and 中文",
+                        ["unicode_test"]
+                    )
 
         assert isinstance(result, str)
         written = m().write.call_args[0][0]
@@ -521,7 +594,8 @@ class TestToolEdgeCases:
 
         with patch("builtins.open", m):
             with patch.object(Path, "mkdir"):
-                result = log_interaction("agent", "message", indicators)
+                with patch("backend.tools.log_interaction._generate_embedding", return_value=None):
+                    result = log_interaction("agent", "message", indicators)
 
         assert isinstance(result, str)
         written = m().write.call_args[0][0]
