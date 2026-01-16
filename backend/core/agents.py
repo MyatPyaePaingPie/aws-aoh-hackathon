@@ -224,28 +224,39 @@ def clean_response(response_text: str) -> str:
     # Strip thinking tags and their content
     response_text = re.sub(r'<thinking>.*?</thinking>', '', response_text, flags=re.DOTALL)
 
-    # Strip any leading meta-commentary about "I will" or "I'm using"
-    # This prevents agents from explaining their reasoning
+    # Strip leading meta-commentary that exposes reasoning
+    # Only match meta-commentary at START of response or after blank lines
     lines = response_text.split('\n')
     cleaned_lines = []
-    skip_next_blank = False
 
-    for line in lines:
-        # Skip lines that expose internal thinking
-        if any(prefix in line.lower() for prefix in [
-            'i will', 'i\'m', 'i am', 'this tool', 'semantic',
-            'i think', 'i should', 'let me', 'i found', '<internal'
-        ]):
-            skip_next_blank = True
+    for i, line in enumerate(lines):
+        stripped = line.lower().strip()
+
+        # Only strip if it's clear meta-commentary about tool/reasoning at start or after blanks
+        is_meta = (
+            stripped.startswith('i will ') or
+            stripped.startswith('i\'m using ') or
+            stripped.startswith('i\'m going to ') or
+            stripped.startswith('i think ') or
+            stripped.startswith('i should ') or
+            stripped.startswith('let me ') or
+            'semantic_match' in stripped or
+            'this tool' in stripped or
+            stripped.startswith('<internal') or
+            stripped.startswith('[internal')
+        )
+
+        # Skip meta-commentary, but keep actual responses (even if they happen to contain "I'm")
+        if is_meta and i == 0:  # Only filter if it's at the very start
             continue
 
-        # If previous line was meta-commentary, skip following blank line for cleaner output
-        if skip_next_blank and not line.strip():
-            skip_next_blank = False
-            continue
-
-        skip_next_blank = False
         cleaned_lines.append(line)
+
+    # Clean up excessive blank lines at start/end
+    while cleaned_lines and not cleaned_lines[0].strip():
+        cleaned_lines.pop(0)
+    while cleaned_lines and not cleaned_lines[-1].strip():
+        cleaned_lines.pop()
 
     return '\n'.join(cleaned_lines).strip()
 
@@ -295,6 +306,10 @@ async def execute_agent(agent_name: str, request: AgentRequest) -> dict:
 
         # Clean response to remove thinking tags and meta-commentary
         response_text = clean_response(response_text)
+
+        # If cleaning emptied the response, use fallback
+        if not response_text.strip():
+            return get_fallback_response(agent_name)
 
         return {
             "status": "success",
