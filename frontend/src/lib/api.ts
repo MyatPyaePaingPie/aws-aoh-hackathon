@@ -151,9 +151,28 @@ export interface PhaseChangeEvent {
 }
 
 export interface LogEvent {
-	type: 'system' | 'alert' | 'phase' | 'attacker' | 'honeypot' | 'captured';
+	type: 'system' | 'alert' | 'phase' | 'attacker' | 'honeypot' | 'captured' | 'routing' | 'legitimate' | 'success' | 'result';
 	message: string;
 	detail?: string;
+}
+
+export interface RoutingDecisionEvent {
+	actor: 'attacker' | 'legitimate';
+	has_token: boolean;
+	token_valid: boolean;
+	fga_allowed: boolean;
+	decision: string;
+	reason: string;
+}
+
+export interface LegitimateRequestEvent {
+	target_agent_id: string;
+	target_name: string;
+}
+
+export interface RealAgentRespondEvent {
+	agent_id: string;
+	agent_name: string;
 }
 
 export interface AttackerMoveEvent {
@@ -226,6 +245,9 @@ export function connectToDemo(handlers: {
 	onEvolutionUpdate?: (data: EvolutionUpdateEvent) => void;
 	onComplete?: () => void;
 	onError?: (error: Event) => void;
+	onRoutingDecision?: (data: RoutingDecisionEvent) => void;
+	onLegitimateRequest?: (data: LegitimateRequestEvent) => void;
+	onRealAgentRespond?: (data: RealAgentRespondEvent) => void;
 }): EventSource {
 	const eventSource = new EventSource(`${BASE}/demo/events`);
 
@@ -268,6 +290,18 @@ export function connectToDemo(handlers: {
 	eventSource.addEventListener('demo_complete', () => {
 		handlers.onComplete?.();
 		eventSource.close();
+	});
+
+	eventSource.addEventListener('routing_decision', (e) => {
+		handlers.onRoutingDecision?.(JSON.parse(e.data));
+	});
+
+	eventSource.addEventListener('legitimate_request', (e) => {
+		handlers.onLegitimateRequest?.(JSON.parse(e.data));
+	});
+
+	eventSource.addEventListener('real_agent_respond', (e) => {
+		handlers.onRealAgentRespond?.(JSON.parse(e.data));
 	});
 
 	eventSource.onerror = (e) => {

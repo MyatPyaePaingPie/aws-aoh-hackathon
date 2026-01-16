@@ -6,7 +6,8 @@
 		type DemoAgent,
 		type PhaseChangeEvent,
 		type LogEvent,
-		type EvolutionStats
+		type EvolutionStats,
+		type RoutingDecisionEvent
 	} from '$lib/api';
 
 	// ============================================================
@@ -23,6 +24,7 @@
 		spawned: boolean;
 		engaged: boolean;
 		targeted: boolean;
+		responding: boolean;
 		x: number;
 		y: number;
 	}
@@ -37,7 +39,7 @@
 	let threatLevel = $state<string>('NONE');
 
 	// Activity log - simplified types matching backend
-	type LogType = 'system' | 'alert' | 'phase' | 'attacker' | 'honeypot' | 'captured';
+	type LogType = 'system' | 'alert' | 'phase' | 'attacker' | 'honeypot' | 'captured' | 'routing' | 'legitimate' | 'success' | 'result';
 	interface LogEntry {
 		id: number;
 		type: LogType;
@@ -46,6 +48,14 @@
 	}
 	let logs = $state<LogEntry[]>([]);
 	let logId = 0;
+
+	// Legitimate agent indicator
+	let legitimateVisible = $state(false);
+	let legitimatePosition = $state({ x: 50, y: 0 });
+	let currentActor = $state<'attacker' | 'legitimate' | null>(null);
+
+	// Routing decision display
+	let routingDecision = $state<RoutingDecisionEvent | null>(null);
 
 	// Stats
 	let fingerprintsCaptured = $state(0);
@@ -103,11 +113,14 @@
 		agents = [];
 		logs = [];
 		attackerVisible = false;
+		legitimateVisible = false;
 		currentPhase = null;
 		threatLevel = 'NONE';
 		demoComplete = false;
 		fingerprintsCaptured = 0;
 		evolutionStats = null;
+		routingDecision = null;
+		currentActor = null;
 		demoRunning = true;
 
 		eventSource = connectToDemo({
@@ -122,6 +135,7 @@
 					spawned: true,
 					engaged: false,
 					targeted: false,
+					responding: false,
 					x: pos.x,
 					y: pos.y
 				};
@@ -136,6 +150,18 @@
 			onPhaseChange: (data) => {
 				currentPhase = data;
 				threatLevel = data.threat_level;
+				// Track actor from phase (backend includes actor in phase_change)
+				const phaseData = data as PhaseChangeEvent & { actor?: string };
+				if (phaseData.actor === 'legitimate') {
+					currentActor = 'legitimate';
+					attackerVisible = false;
+					legitimateVisible = true;
+				} else if (phaseData.actor === 'attacker') {
+					currentActor = 'attacker';
+					attackerVisible = true;
+					legitimateVisible = false;
+				}
+				routingDecision = null; // Reset routing decision for new phase
 			},
 
 			onAttackerMove: (data) => {
@@ -173,6 +199,39 @@
 			onComplete: () => {
 				demoRunning = false;
 				demoComplete = true;
+				routingDecision = null;
+			},
+
+			onRoutingDecision: (data) => {
+				routingDecision = data;
+			},
+
+			onLegitimateRequest: (data) => {
+				// Move legitimate agent indicator toward target
+				const target = agents.find((a) => a.id === data.target_agent_id);
+				if (target) {
+					legitimatePosition = { x: target.x - 30, y: target.y - 30 };
+					agents = agents.map((a) => ({
+						...a,
+						targeted: a.id === data.target_agent_id
+					}));
+				}
+			},
+
+			onRealAgentRespond: (data) => {
+				// Mark real agent as responding (green glow)
+				agents = agents.map((a) => ({
+					...a,
+					responding: a.id === data.agent_id,
+					targeted: false
+				}));
+				// Clear responding state after animation
+				setTimeout(() => {
+					agents = agents.map((a) => ({
+						...a,
+						responding: false
+					}));
+				}, 2000);
 			},
 
 			onError: () => {
@@ -192,11 +251,14 @@
 		agents = [];
 		logs = [];
 		attackerVisible = false;
+		legitimateVisible = false;
 		currentPhase = null;
 		threatLevel = 'NONE';
 		demoComplete = false;
 		fingerprintsCaptured = 0;
 		evolutionStats = null;
+		routingDecision = null;
+		currentActor = null;
 	}
 
 	// ============================================================
@@ -270,12 +332,27 @@
 		</div>
 	</div>
 
-	<!-- AWS Integration Banner -->
-	<div class="aws-banner">
-		<span class="aws-badge">AWS CloudWatch</span>
-		<span class="aws-info">Metrics streaming to namespace: <code>HoneyAgent</code></span>
-		<span class="aws-badge bedrock">Bedrock Intel</span>
-		<span class="aws-info">Attack patterns indexed for semantic search</span>
+	<!-- Tech Stack Banner -->
+	<div class="tech-banner">
+		<div class="tech-section aws">
+			<img src="https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg" alt="AWS" class="tech-logo" />
+			<div class="tech-items">
+				<span class="tech-badge cloudwatch">CloudWatch</span>
+				<span class="tech-desc">Real-time metrics</span>
+				<span class="tech-badge bedrock">Bedrock KB</span>
+				<span class="tech-desc">Threat intelligence</span>
+			</div>
+		</div>
+		<div class="tech-divider"></div>
+		<div class="tech-section auth0">
+			<img src="https://cdn.auth0.com/website/bob/press/logo-light.png" alt="Auth0" class="tech-logo auth0-logo" />
+			<div class="tech-items">
+				<span class="tech-badge jwt">JWT M2M</span>
+				<span class="tech-desc">Agent identity</span>
+				<span class="tech-badge fga">FGA</span>
+				<span class="tech-desc">Fine-grained routing</span>
+			</div>
+		</div>
 	</div>
 
 	<div class="main-content">
@@ -297,6 +374,7 @@
 						class:engaged={agent.engaged}
 						class:targeted={agent.targeted}
 						class:honeypot={agent.is_honeypot}
+						class:responding={agent.responding}
 						style="left: {agent.x}px; top: {agent.y}px;"
 						title={agent.name}
 					>
@@ -322,7 +400,48 @@
 						<span class="attacker-label">ATTACKER</span>
 					</div>
 				{/if}
+
+				<!-- Legitimate Agent -->
+				{#if legitimateVisible}
+					<div
+						class="legitimate-node"
+						style="left: {legitimatePosition.x}px; top: {legitimatePosition.y}px;"
+					>
+						<div class="legitimate-inner">
+							<span class="legitimate-icon">✓</span>
+						</div>
+						<span class="legitimate-label">AGENT</span>
+					</div>
+				{/if}
 			</div>
+
+			<!-- Routing Decision Panel -->
+			{#if routingDecision}
+				<div class="routing-panel" class:legitimate={routingDecision.actor === 'legitimate'}>
+					<div class="routing-header">
+						<img src="https://cdn.auth0.com/website/bob/press/logo-light.png" alt="Auth0" class="routing-logo" />
+						<span class="routing-title">IDENTITY GATEWAY</span>
+					</div>
+					<div class="routing-checks">
+						<div class="routing-check" class:pass={routingDecision.has_token} class:fail={!routingDecision.has_token}>
+							<span class="check-icon">{routingDecision.has_token ? '✓' : '✗'}</span>
+							<span>Auth0 JWT Present</span>
+						</div>
+						<div class="routing-check" class:pass={routingDecision.token_valid} class:fail={!routingDecision.token_valid}>
+							<span class="check-icon">{routingDecision.token_valid ? '✓' : '✗'}</span>
+							<span>M2M Token Valid</span>
+						</div>
+						<div class="routing-check" class:pass={routingDecision.fga_allowed} class:fail={!routingDecision.fga_allowed}>
+							<span class="check-icon">{routingDecision.fga_allowed ? '✓' : '✗'}</span>
+							<span>Auth0 FGA Allowed</span>
+						</div>
+					</div>
+					<div class="routing-decision-text" class:honeypot={routingDecision.decision.includes('HONEYPOT')} class:real={routingDecision.decision.includes('REAL')}>
+						{routingDecision.decision}
+					</div>
+					<div class="routing-reason">{routingDecision.reason}</div>
+				</div>
+			{/if}
 
 			<!-- Legend -->
 			<div class="legend">
@@ -341,6 +460,10 @@
 				<div class="legend-item">
 					<div class="legend-hex attacker"></div>
 					<span>Attacker</span>
+				</div>
+				<div class="legend-item">
+					<div class="legend-hex legitimate"></div>
+					<span>Legitimate</span>
 				</div>
 			</div>
 		</div>
@@ -731,45 +854,80 @@
 		}
 	}
 
-	/* AWS Integration Banner */
-	.aws-banner {
+	/* Tech Stack Banner */
+	.tech-banner {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 2rem;
+		padding: 1rem 2rem;
+		background: linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(20, 20, 20, 0.6));
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: var(--radius-md);
+		margin-bottom: 1.5rem;
+	}
+
+	.tech-section {
 		display: flex;
 		align-items: center;
 		gap: 1rem;
-		padding: 0.75rem 1.5rem;
-		background: linear-gradient(135deg, rgba(255, 153, 0, 0.1), rgba(35, 47, 62, 0.3));
-		border: 1px solid rgba(255, 153, 0, 0.2);
-		border-radius: var(--radius-md);
-		margin-bottom: 1.5rem;
+	}
+
+	.tech-logo {
+		height: 28px;
+		width: auto;
+		filter: brightness(1.1);
+	}
+
+	.tech-logo.auth0-logo {
+		height: 24px;
+	}
+
+	.tech-items {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
 		flex-wrap: wrap;
 	}
 
-	.aws-badge {
-		padding: 0.35rem 0.75rem;
-		background: linear-gradient(135deg, #ff9900, #ffb84d);
-		color: #232f3e;
-		font-size: 0.75rem;
+	.tech-badge {
+		padding: 0.3rem 0.6rem;
+		font-size: 0.7rem;
 		font-weight: 700;
-		letter-spacing: 0.03em;
+		letter-spacing: 0.05em;
 		border-radius: 4px;
 		text-transform: uppercase;
 	}
 
-	.aws-badge.bedrock {
+	.tech-badge.cloudwatch {
+		background: linear-gradient(135deg, #ff9900, #ffb84d);
+		color: #232f3e;
+	}
+
+	.tech-badge.bedrock {
 		background: linear-gradient(135deg, #00a4ef, #4dc3ff);
+		color: #fff;
 	}
 
-	.aws-info {
-		color: var(--text-secondary);
-		font-size: 0.85rem;
+	.tech-badge.jwt {
+		background: linear-gradient(135deg, #eb5424, #ff7043);
+		color: #fff;
 	}
 
-	.aws-info code {
-		background: rgba(255, 153, 0, 0.15);
-		padding: 0.15rem 0.4rem;
-		border-radius: 3px;
-		font-family: 'Fira Code', monospace;
-		color: #ffb84d;
+	.tech-badge.fga {
+		background: linear-gradient(135deg, #635bff, #8b7fff);
+		color: #fff;
+	}
+
+	.tech-desc {
+		color: var(--text-muted);
+		font-size: 0.75rem;
+	}
+
+	.tech-divider {
+		width: 1px;
+		height: 40px;
+		background: rgba(255, 255, 255, 0.15);
 	}
 
 	/* Main Content */
@@ -1126,5 +1284,235 @@
 		font-size: 0.9rem;
 		border-top: 1px solid rgba(255, 255, 255, 0.1);
 		line-height: 1.4;
+	}
+
+	/* ============================================================
+	   NEW: Legitimate Agent Node
+	   ============================================================ */
+
+	.legitimate-node {
+		position: absolute;
+		width: 60px;
+		height: 60px;
+		transition: all 1s ease;
+		z-index: 100;
+	}
+
+	.legitimate-inner {
+		width: 100%;
+		height: 100%;
+		background: #22c55e;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		animation: legitimatePulse 1.5s infinite;
+		box-shadow: 0 0 20px #22c55e;
+	}
+
+	@keyframes legitimatePulse {
+		0%, 100% {
+			transform: scale(1);
+			box-shadow: 0 0 20px #22c55e;
+		}
+		50% {
+			transform: scale(1.05);
+			box-shadow: 0 0 30px #22c55e, 0 0 50px #16a34a;
+		}
+	}
+
+	.legitimate-icon {
+		font-size: 1.5rem;
+		font-weight: bold;
+		color: white;
+	}
+
+	.legitimate-label {
+		position: absolute;
+		bottom: -20px;
+		left: 50%;
+		transform: translateX(-50%);
+		font-size: 0.7rem;
+		color: #22c55e;
+		font-weight: bold;
+		white-space: nowrap;
+	}
+
+	/* ============================================================
+	   NEW: Responding Agent (real agent processing legitimate request)
+	   ============================================================ */
+
+	.hex-cell.responding .hex-inner {
+		background: #22c55e;
+		animation: respondingGlow 0.8s infinite alternate;
+	}
+
+	@keyframes respondingGlow {
+		from {
+			box-shadow: 0 0 15px #22c55e;
+		}
+		to {
+			box-shadow: 0 0 35px #22c55e, 0 0 55px #16a34a;
+		}
+	}
+
+	/* ============================================================
+	   NEW: Routing Decision Panel
+	   ============================================================ */
+
+	.routing-panel {
+		position: absolute;
+		top: 10px;
+		right: 10px;
+		background: rgba(0, 0, 0, 0.85);
+		border: 2px solid #ef4444;
+		border-radius: 12px;
+		padding: 1rem;
+		min-width: 200px;
+		animation: slideIn 0.3s ease-out;
+		z-index: 200;
+	}
+
+	.routing-panel.legitimate {
+		border-color: #22c55e;
+	}
+
+	@keyframes slideIn {
+		from {
+			opacity: 0;
+			transform: translateX(20px);
+		}
+		to {
+			opacity: 1;
+			transform: translateX(0);
+		}
+	}
+
+	.routing-header {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		margin-bottom: 0.75rem;
+		padding-bottom: 0.5rem;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	}
+
+	.routing-logo {
+		height: 18px;
+		width: auto;
+	}
+
+	.routing-title {
+		font-size: 0.7rem;
+		font-weight: 700;
+		letter-spacing: 0.1em;
+		color: #eb5424;
+	}
+
+	.routing-checks {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		margin-bottom: 0.75rem;
+	}
+
+	.routing-check {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.85rem;
+		padding: 0.25rem 0.5rem;
+		border-radius: 4px;
+		background: rgba(255, 255, 255, 0.05);
+	}
+
+	.routing-check.pass {
+		color: #86efac;
+	}
+
+	.routing-check.fail {
+		color: #fca5a5;
+	}
+
+	.check-icon {
+		font-weight: bold;
+		width: 1.2rem;
+		text-align: center;
+	}
+
+	.routing-decision-text {
+		font-size: 1rem;
+		font-weight: 700;
+		text-align: center;
+		padding: 0.5rem;
+		border-radius: 6px;
+		margin-bottom: 0.5rem;
+	}
+
+	.routing-decision-text.honeypot {
+		background: rgba(251, 191, 36, 0.2);
+		color: #fde68a;
+	}
+
+	.routing-decision-text.real {
+		background: rgba(34, 197, 94, 0.2);
+		color: #86efac;
+	}
+
+	.routing-reason {
+		font-size: 0.75rem;
+		color: #9ca3af;
+		text-align: center;
+		font-style: italic;
+	}
+
+	/* ============================================================
+	   NEW: Additional Log Entry Styles
+	   ============================================================ */
+
+	.log-entry.routing {
+		background: rgba(96, 165, 250, 0.15);
+		border-left-color: #60a5fa;
+	}
+	.log-entry.routing .log-message {
+		color: #93c5fd;
+		font-weight: 600;
+	}
+
+	.log-entry.legitimate {
+		background: rgba(34, 197, 94, 0.1);
+		border-left-color: #22c55e;
+	}
+	.log-entry.legitimate .log-message {
+		color: #86efac;
+		font-style: italic;
+	}
+
+	.log-entry.success {
+		background: rgba(34, 197, 94, 0.15);
+		border-left-color: #22c55e;
+	}
+	.log-entry.success .log-message {
+		color: #86efac;
+	}
+
+	.log-entry.result {
+		background: rgba(139, 92, 246, 0.1);
+		border-left-color: #a78bfa;
+	}
+	.log-entry.result .log-message {
+		color: #c4b5fd;
+		font-weight: 600;
+	}
+
+	/* ============================================================
+	   NEW: Legend Item for Legitimate
+	   ============================================================ */
+
+	.legend-hex.legitimate {
+		background: #22c55e;
+		border-radius: 50%;
+		clip-path: none;
 	}
 </style>
