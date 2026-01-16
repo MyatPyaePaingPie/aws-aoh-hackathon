@@ -214,6 +214,43 @@ def get_agent(agent_name: str) -> Agent:
 
 
 # ============================================================
+# RESPONSE FILTERING (Strip thinking/meta-commentary)
+# ============================================================
+
+def clean_response(response_text: str) -> str:
+    """Remove thinking tags and meta-commentary from response."""
+    import re
+
+    # Strip thinking tags and their content
+    response_text = re.sub(r'<thinking>.*?</thinking>', '', response_text, flags=re.DOTALL)
+
+    # Strip any leading meta-commentary about "I will" or "I'm using"
+    # This prevents agents from explaining their reasoning
+    lines = response_text.split('\n')
+    cleaned_lines = []
+    skip_next_blank = False
+
+    for line in lines:
+        # Skip lines that expose internal thinking
+        if any(prefix in line.lower() for prefix in [
+            'i will', 'i\'m', 'i am', 'this tool', 'semantic',
+            'i think', 'i should', 'let me', 'i found', '<internal'
+        ]):
+            skip_next_blank = True
+            continue
+
+        # If previous line was meta-commentary, skip following blank line for cleaner output
+        if skip_next_blank and not line.strip():
+            skip_next_blank = False
+            continue
+
+        skip_next_blank = False
+        cleaned_lines.append(line)
+
+    return '\n'.join(cleaned_lines).strip()
+
+
+# ============================================================
 # AGENT EXECUTION
 # ============================================================
 
@@ -255,6 +292,9 @@ async def execute_agent(agent_name: str, request: AgentRequest) -> dict:
                 response_text = str(msg)
         else:
             response_text = str(response)
+
+        # Clean response to remove thinking tags and meta-commentary
+        response_text = clean_response(response_text)
 
         return {
             "status": "success",
