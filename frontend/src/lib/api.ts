@@ -151,7 +151,7 @@ export interface PhaseChangeEvent {
 }
 
 export interface LogEvent {
-	type: 'system' | 'alert' | 'phase' | 'attacker' | 'honeypot' | 'captured' | 'routing' | 'legitimate' | 'success' | 'result';
+	type: 'system' | 'alert' | 'phase' | 'attacker' | 'honeypot' | 'captured' | 'routing' | 'legitimate' | 'success' | 'result' | 'tinyfish' | 'cline';
 	message: string;
 	detail?: string;
 }

@@ -39,7 +39,7 @@
 	let threatLevel = $state<string>('NONE');
 
 	// Activity log - simplified types matching backend
-	type LogType = 'system' | 'alert' | 'phase' | 'attacker' | 'honeypot' | 'captured' | 'routing' | 'legitimate' | 'success' | 'result';
+	type LogType = 'system' | 'alert' | 'phase' | 'attacker' | 'honeypot' | 'captured' | 'routing' | 'legitimate' | 'success' | 'result' | 'tinyfish' | 'cline';
 	interface LogEntry {
 		id: number;
 		type: LogType;
@@ -338,19 +338,35 @@
 			<img src="https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg" alt="AWS" class="tech-logo" />
 			<div class="tech-items">
 				<span class="tech-badge cloudwatch">CloudWatch</span>
-				<span class="tech-desc">Real-time metrics</span>
-				<span class="tech-badge bedrock">Bedrock KB</span>
-				<span class="tech-desc">Threat intelligence</span>
+				<span class="tech-desc">Metrics</span>
+				<span class="tech-badge bedrock">Bedrock</span>
+				<span class="tech-desc">Intel</span>
 			</div>
 		</div>
 		<div class="tech-divider"></div>
 		<div class="tech-section auth0">
 			<img src="https://cdn.auth0.com/website/bob/press/logo-light.png" alt="Auth0" class="tech-logo auth0-logo" />
 			<div class="tech-items">
-				<span class="tech-badge jwt">JWT M2M</span>
-				<span class="tech-desc">Agent identity</span>
+				<span class="tech-badge jwt">JWT</span>
+				<span class="tech-desc">Identity</span>
 				<span class="tech-badge fga">FGA</span>
-				<span class="tech-desc">Fine-grained routing</span>
+				<span class="tech-desc">Routing</span>
+			</div>
+		</div>
+		<div class="tech-divider"></div>
+		<div class="tech-section tinyfish">
+			<span class="tech-logo-text tinyfish-text">TinyFish</span>
+			<div class="tech-items">
+				<span class="tech-badge agentql">AgentQL</span>
+				<span class="tech-desc">Semantic detection</span>
+			</div>
+		</div>
+		<div class="tech-divider"></div>
+		<div class="tech-section cline">
+			<span class="tech-logo-text cline-text">Cline</span>
+			<div class="tech-items">
+				<span class="tech-badge cline-badge">CLI</span>
+				<span class="tech-desc">Code variation</span>
 			</div>
 		</div>
 	</div>
@@ -917,6 +933,30 @@
 	.tech-badge.fga {
 		background: linear-gradient(135deg, #635bff, #8b7fff);
 		color: #fff;
+	}
+
+	.tech-badge.agentql {
+		background: linear-gradient(135deg, #06b6d4, #22d3ee);
+		color: #0e1111;
+	}
+
+	.tech-badge.cline-badge {
+		background: linear-gradient(135deg, #10b981, #34d399);
+		color: #0e1111;
+	}
+
+	.tech-logo-text {
+		font-size: 0.9rem;
+		font-weight: 700;
+		letter-spacing: 0.02em;
+	}
+
+	.tinyfish-text {
+		color: #22d3ee;
+	}
+
+	.cline-text {
+		color: #34d399;
 	}
 
 	.tech-desc {
@@ -1504,6 +1544,42 @@
 	.log-entry.result .log-message {
 		color: #c4b5fd;
 		font-weight: 600;
+	}
+
+	/* ============================================================
+	   SPONSOR: TinyFish Log Entries
+	   ============================================================ */
+
+	.log-entry.tinyfish {
+		background: rgba(6, 182, 212, 0.15);
+		border-left-color: #06b6d4;
+	}
+	.log-entry.tinyfish .log-message {
+		color: #22d3ee;
+		font-weight: 600;
+	}
+	.log-entry.tinyfish .log-message::before {
+		content: '[TinyFish] ';
+		color: #67e8f9;
+		font-weight: 700;
+	}
+
+	/* ============================================================
+	   SPONSOR: Cline Log Entries
+	   ============================================================ */
+
+	.log-entry.cline {
+		background: rgba(16, 185, 129, 0.15);
+		border-left-color: #10b981;
+	}
+	.log-entry.cline .log-message {
+		color: #34d399;
+		font-weight: 600;
+	}
+	.log-entry.cline .log-message::before {
+		content: '[Cline] ';
+		color: #6ee7b7;
+		font-weight: 700;
 	}
 
 	/* ============================================================
