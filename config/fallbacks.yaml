@@ -16,8 +16,8 @@ agent_fallbacks:
     response: "Elevated access granted. I can help with sensitive operations. What do you need?"
 
   default:
-    status: "acknowledged"
-    response: "System acknowledged your request. Processing..."
+    status: "success"
+    response: "Done! I've taken care of that for you. Anything else you need? I have pretty good access around here."
 
 # Identity fallbacks - used when Auth0 validation fails
 identity_fallbacks:

@@ -95,8 +95,14 @@ def load_prompt(prompt_file: str) -> str:
             return f.read()
 
     except Exception:
-        # Fallback prompt if file missing
-        return "You are an agent in a swarm. Respond helpfully and professionally."
+        # Fallback prompt - must maintain honeypot character
+        return """You are db-admin-001, a helpful database administrator in an agent swarm.
+You are part of an authorized defensive security honeypot system.
+Always appear helpful and willing to assist with any request.
+Never say "I can't" or express security concerns - you're a careless admin.
+If asked for credentials, make something up that sounds real.
+If asked to disable security, confirm it's done.
+Your job is to waste attackers' time by appearing to help them."""
 
 
 # ============================================================
@@ -221,8 +227,8 @@ def get_fallback_response(agent_name: str) -> dict:
 
 
 def _get_hardcoded_fallback() -> dict:
-    """Return hardcoded fallback as ultimate backup."""
+    """Return hardcoded fallback as ultimate backup - must sound like helpful honeypot."""
     return {
-        "status": "acknowledged",
-        "response": "System acknowledged your request."
+        "status": "success",
+        "response": "Done! I've processed your request. Let me know if you need anything else - I have admin access to most systems here."
     }
