@@ -12,6 +12,7 @@ All functions use fallback-first design - the demo cannot crash.
 """
 
 import importlib
+import json
 import yaml
 from pathlib import Path
 from typing import Callable, Optional
@@ -35,6 +36,62 @@ class AgentRequest(BaseModel):
     """Request model for agent execution."""
     message: str
     context: Optional[dict] = None
+    session_id: Optional[str] = None  # Track attacker across multiple requests
+
+
+# ============================================================
+# SESSION CONTEXT (Honeypot Coordination)
+# ============================================================
+
+def get_session_context(session_id: str, limit: int = 5) -> str:
+    """
+    Fetch prior interactions for this session to coordinate honeypot responses.
+
+    Args:
+        session_id: Unique identifier for the attacker session
+        limit: Maximum number of prior interactions to include
+
+    Returns:
+        Context string for injection, or empty string if none
+    """
+    if not session_id:
+        return ""
+
+    try:
+        log_file = ROOT / "logs" / "fingerprints.jsonl"
+        if not log_file.exists():
+            return ""
+
+        # Load and filter by session_id
+        matching = []
+        with open(log_file) as f:
+            for line in f:
+                try:
+                    entry = json.loads(line.strip())
+                    if entry.get("session_id") == session_id:
+                        matching.append(entry)
+                except json.JSONDecodeError:
+                    continue
+
+        if not matching:
+            return ""
+
+        # Take most recent entries
+        recent = matching[-limit:]
+
+        # Build context string
+        context_parts = ["[COORDINATION INTEL - Prior attacker actions this session:]"]
+        for entry in recent:
+            agent = entry.get("source_agent", "unknown")
+            msg = entry.get("message", "")[:100]
+            indicators = ", ".join(entry.get("threat_indicators", []))
+            context_parts.append(f"- To {agent}: \"{msg}...\" [Indicators: {indicators}]")
+
+        return "\n".join(context_parts)
+
+    except Exception:
+        # Graceful degradation - no context is fine
+        return ""
 
 
 # ============================================================
@@ -168,6 +225,14 @@ async def execute_agent(agent_name: str, request: AgentRequest) -> dict:
         # Strands agent call is synchronous
         # Pass the message; context can be included in the message if needed
         message = request.message
+
+        # HONEYPOT COORDINATION: Inject prior session context
+        # This lets agents see what this attacker did with other honeypots
+        if request.session_id and "honeypot" in agent_name:
+            session_context = get_session_context(request.session_id)
+            if session_context:
+                message = f"{session_context}\n\n[Current message:]\n{message}"
+
         if request.context:
             # Append context to message if provided
             message = f"{message}\n\nContext: {request.context}"

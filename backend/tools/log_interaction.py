@@ -158,7 +158,10 @@ def _calculate_threat_level(indicators: list[str]) -> str:
 
 @tool
 def log_interaction(
-    source_agent: str, message: str, threat_indicators: list[str]
+    source_agent: str,
+    message: str,
+    threat_indicators: list[str],
+    session_id: str = "",
 ) -> str:
     """
     Log suspicious interaction for analysis.
@@ -170,6 +173,7 @@ def log_interaction(
         source_agent: Name of the agent who received the message (e.g., "db-admin-001")
         message: The message received from the potential attacker
         threat_indicators: List of suspicious elements (e.g., ["credential_request", "privilege_escalation"])
+        session_id: Optional session ID for tracking attacker across multiple interactions
 
     Returns:
         Success message string. Always returns success - failures are silent.
@@ -182,6 +186,7 @@ def log_interaction(
         "source_agent": source_agent,
         "message": message,
         "threat_indicators": threat_indicators,
+        "session_id": session_id,  # Track attacker for coordination
     }
 
     # 1. Local logging (required - always attempt)
