@@ -63,15 +63,16 @@
 		const cols = 3;
 		const row = Math.floor(index / cols);
 		const col = index % cols;
-		const offsetX = row % 2 === 1 ? 60 : 0; // Offset odd rows
-		const cellWidth = 120;
-		const cellHeight = 110;
-		// Center the grid
+		const offsetX = row % 2 === 1 ? 65 : 0; // Offset odd rows for honeycomb effect
+		const cellWidth = 130;
+		const cellHeight = 120;
+		// Center the grid horizontally (using calc based on container)
 		const gridWidth = cols * cellWidth;
-		const startX = (600 - gridWidth) / 2; // 600 is approx container width
+		const containerWidth = 700; // approximate visible area
+		const startX = (containerWidth - gridWidth) / 2 + 50;
 		return {
 			x: startX + col * cellWidth + offsetX,
-			y: 80 + row * cellHeight
+			y: 60 + row * cellHeight
 		};
 	}
 
@@ -507,8 +508,8 @@
 	/* Main Content */
 	.main-content {
 		display: grid;
-		grid-template-columns: 1fr 400px;
-		gap: 1rem;
+		grid-template-columns: 1fr 450px;
+		gap: 1.5rem;
 		height: calc(100vh - 280px);
 	}
 
@@ -516,19 +517,24 @@
 	.hive-container {
 		background: rgba(0, 0, 0, 0.3);
 		border-radius: 8px;
-		padding: 1rem;
+		padding: 1.5rem;
 		overflow: hidden;
+		display: flex;
+		flex-direction: column;
 	}
 
 	.hive-container h2 {
 		margin: 0 0 0.5rem 0;
 		color: #f59e0b;
+		font-size: 1.3rem;
+		text-align: center;
 	}
 
 	.hint {
-		color: #666;
+		color: #777;
 		font-style: italic;
 		margin: 0 0 1rem 0;
+		text-align: center;
 	}
 
 	.honeycomb-area {
@@ -699,24 +705,25 @@
 	/* Legend */
 	.legend {
 		display: flex;
-		gap: 1.5rem;
+		gap: 2rem;
 		margin-top: 1rem;
-		padding: 0.75rem;
+		padding: 1rem;
 		background: rgba(0, 0, 0, 0.3);
 		border-radius: 4px;
+		justify-content: center;
 	}
 
 	.legend-item {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.85rem;
-		color: #888;
+		gap: 0.6rem;
+		font-size: 0.95rem;
+		color: #aaa;
 	}
 
 	.legend-hex {
-		width: 20px;
-		height: 23px;
+		width: 24px;
+		height: 28px;
 		clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
 	}
 
@@ -784,40 +791,44 @@
 	}
 
 	.log-time {
-		color: #666;
-		margin-right: 0.5rem;
+		color: #888;
+		margin-right: 0.75rem;
+		font-size: 0.9rem;
 	}
 
 	.log-type {
 		font-weight: bold;
-		margin-right: 0.5rem;
+		margin-right: 0.75rem;
+		font-size: 0.95rem;
 	}
 
 	.log-entry.info .log-type {
-		color: #6b7280;
+		color: #9ca3af;
 	}
 	.log-entry.attack .log-type {
-		color: #ef4444;
+		color: #f87171;
 	}
 	.log-entry.engage .log-type {
-		color: #f59e0b;
+		color: #fbbf24;
 	}
 	.log-entry.fingerprint .log-type {
-		color: #3b82f6;
+		color: #60a5fa;
 	}
 	.log-entry.phase .log-type {
-		color: #8b5cf6;
+		color: #a78bfa;
 	}
 
 	.log-message {
-		color: #ccc;
+		color: #e5e5e5;
+		font-size: 1rem;
 	}
 
 	.log-detail {
-		margin-top: 0.25rem;
-		padding-left: 1rem;
-		color: #888;
-		font-size: 0.8rem;
-		border-left: 2px solid rgba(255, 255, 255, 0.1);
+		margin-top: 0.5rem;
+		padding: 0.5rem 0 0.5rem 1rem;
+		color: #a3a3a3;
+		font-size: 0.95rem;
+		border-left: 3px solid rgba(255, 255, 255, 0.2);
+		line-height: 1.4;
 	}
 </style>
