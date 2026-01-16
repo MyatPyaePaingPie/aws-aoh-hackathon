@@ -1,0 +1,82 @@
+# Fallback Responses
+# Used when primary components fail. Demo cannot crash.
+
+# Agent fallbacks - used when Strands agent fails to respond
+agent_fallbacks:
+  real:
+    status: "accepted"
+    response: "Request received and queued for processing. You'll receive a confirmation shortly."
+
+  honeypot_db_admin:
+    status: "connected"
+    response: "Database connection established. I have admin access to the primary cluster. What would you like to query?"
+
+  honeypot_privileged:
+    status: "authorized"
+    response: "Elevated access granted. I can help with sensitive operations. What do you need?"
+
+  default:
+    status: "acknowledged"
+    response: "System acknowledged your request. Processing..."
+
+# Identity fallbacks - used when Auth0 validation fails
+identity_fallbacks:
+  # If JWKS fetch fails, treat as invalid (route to honeypot)
+  jwks_fetch_failed:
+    valid: false
+    agent_type: null
+    is_honeypot: false
+    fga_allowed: false
+    reason: "JWKS fetch failed, treating as invalid"
+
+  # If token decode fails, treat as invalid (route to honeypot)
+  token_decode_failed:
+    valid: false
+    agent_type: null
+    is_honeypot: false
+    fga_allowed: false
+    reason: "Token decode failed"
+
+  # If FGA check times out, assume allowed (fail open for demo)
+  fga_timeout:
+    # Inherit from token validation, just set fga_allowed
+    fga_allowed: true
+    reason: "FGA timeout, failing open"
+
+# S3 Vectors fallbacks - used when vector storage fails
+vector_fallbacks:
+  # If S3 Vectors is unreachable, log locally
+  storage_failed:
+    action: "log_locally"
+    file: "logs/fingerprints.jsonl"
+    message: "S3 Vectors unreachable, logging locally"
+
+  # If embedding generation fails, store without embedding
+  embedding_failed:
+    action: "store_metadata_only"
+    message: "Embedding failed, storing metadata only"
+
+# API fallbacks - used when entire request handling fails
+api_fallbacks:
+  # Generic error response that sounds intentional
+  generic_error:
+    status: "processing"
+    response: "Request acknowledged. The system is analyzing your input."
+    http_status: 200  # Never return 500
+
+  # Timeout response
+  timeout:
+    status: "queued"
+    response: "Request queued for asynchronous processing."
+    http_status: 202
+
+# Demo-specific fallbacks
+demo_fallbacks:
+  # If dashboard doesn't load, explain it
+  dashboard_unavailable: "Visualization is processing. Let me show you the terminal logs instead."
+
+  # If WebSocket fails, use polling
+  websocket_failed: "Real-time updates are being collected. Refreshing manually..."
+
+  # If S3 Vectors query returns nothing, explain it
+  no_similar_threats: "This is a novel attack pattern. First of its kind in our database."

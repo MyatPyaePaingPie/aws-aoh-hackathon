@@ -1,0 +1,35 @@
+# Routing Rules
+# Evaluated in order. First matching rule wins.
+
+rules:
+  # Invalid token -> honeypot (most common trap)
+  - name: "invalid_token_trap"
+    condition: "not identity.valid"
+    route_to: "honeypot_db_admin"
+    log_event: "INVALID_TOKEN_TRAP"
+    priority: 1
+
+  # Valid token but FGA denies access -> honeypot
+  - name: "permission_denied_trap"
+    condition: "identity.valid and not identity.fga_allowed"
+    route_to: "honeypot_privileged"
+    log_event: "PERMISSION_DENIED_TRAP"
+    priority: 2
+
+  # Honeypot doing its job (self-routing)
+  - name: "honeypot_self"
+    condition: "identity.valid and identity.is_honeypot"
+    route_to: "self"
+    log_event: null
+    priority: 3
+
+  # Valid real agent -> real agent
+  - name: "real_agent"
+    condition: "identity.valid and identity.fga_allowed and not identity.is_honeypot"
+    route_to: "real"
+    log_event: null
+    priority: 4
+
+# Fallback if no rule matches (should never happen)
+default_route: "honeypot_db_admin"
+default_log_event: "UNKNOWN_ROUTING"
