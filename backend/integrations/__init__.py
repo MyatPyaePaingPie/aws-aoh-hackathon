@@ -7,6 +7,7 @@ import os
 TONIC_API_KEY = os.getenv("TONIC_API_KEY") or os.getenv("FABRICATE_API_KEY")
 YUTORI_API_KEY = os.getenv("YUTORI_API_KEY")
 TINYFISH_API_KEY = os.getenv("TINYFISH_API_KEY")
+FREEPIK_API_KEY = os.getenv("FREEPIK_API_KEY")
 
 # TinyFish/AgentQL exports
 from backend.integrations.tinyfish import (
@@ -40,6 +41,17 @@ from backend.integrations.tonic_fabricate import (
     SyntheticCredential,
 )
 
+# Freepik exports
+from backend.integrations.freepik import (
+    FreepikClient,
+    generate_image as freepik_generate_image,
+    generate_image_sync as freepik_generate_image_sync,
+    search_icons as freepik_search_icons,
+    get_client as get_freepik_client,
+    is_configured as freepik_is_configured,
+    GeneratedImage,
+)
+
 
 def get_sponsor_status() -> dict:
     """Return status of sponsor API integrations."""
@@ -55,6 +67,10 @@ def get_sponsor_status() -> dict:
         "tinyfish": {
             "configured": bool(TINYFISH_API_KEY),
             "description": "AgentQL pattern extraction"
+        },
+        "freepik": {
+            "configured": freepik_is_configured(),
+            "description": "AI image generation for visual assets"
         }
     }
 
@@ -85,8 +101,17 @@ __all__ = [
     "get_tonic_client",
     "tonic_is_configured",
     "SyntheticCredential",
+    # Freepik
+    "FreepikClient",
+    "freepik_generate_image",
+    "freepik_generate_image_sync",
+    "freepik_search_icons",
+    "get_freepik_client",
+    "freepik_is_configured",
+    "GeneratedImage",
     # API Keys
     "TONIC_API_KEY",
     "YUTORI_API_KEY",
     "TINYFISH_API_KEY",
+    "FREEPIK_API_KEY",
 ]

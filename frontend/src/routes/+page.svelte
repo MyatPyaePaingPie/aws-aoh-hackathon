@@ -45,7 +45,7 @@
 	let threatLevel = $state<string>('NONE');
 
 	// Activity log - simplified types matching backend
-	type LogType = 'system' | 'alert' | 'phase' | 'attacker' | 'honeypot' | 'captured' | 'routing' | 'legitimate' | 'success' | 'result' | 'tinyfish' | 'cline';
+	type LogType = 'system' | 'alert' | 'phase' | 'attacker' | 'honeypot' | 'captured' | 'routing' | 'legitimate' | 'success' | 'result' | 'tinyfish' | 'cline' | 'yutori' | 'tonic';
 	interface LogEntry {
 		id: number;
 		type: LogType;
