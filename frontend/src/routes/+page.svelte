@@ -71,6 +71,16 @@
 	// Stats
 	let fingerprintsCaptured = $state(0);
 
+	// Sponsor usage stats
+	let sponsorStats = $state({
+		auth0_checks: 0,
+		bedrock_calls: 0,
+		tinyfish_patterns: 0,
+		tonic_credentials: 0,
+		s3_fingerprints: 0,
+		strands_agents: 0
+	});
+
 	// Evolution stats
 	let evolutionStats = $state<EvolutionStats | null>(null);
 
@@ -89,8 +99,94 @@
 	// HELPERS
 	// ============================================================
 
+	// Sponsor attribution mapping
+	const sponsorIcons: Record<string, string> = {
+		auth0: '🔐',
+		bedrock: '🤖',
+		strands: '⚡',
+		tinyfish: '🔍',
+		tonic: '🎭',
+		s3_vectors: '📊',
+		cloudwatch: '📈'
+	};
+
+	const sponsorLabels: Record<string, string> = {
+		auth0: 'AUTH0',
+		bedrock: 'BEDROCK',
+		strands: 'STRANDS',
+		tinyfish: 'TINYFISH',
+		tonic: 'TONIC',
+		s3_vectors: 'S3 VECTORS',
+		cloudwatch: 'CLOUDWATCH'
+	};
+
+	function getSponsorFromMessage(message: string): string | null {
+		const lowerMsg = message.toLowerCase();
+		
+		// Auth0 patterns
+		if (lowerMsg.includes('token') || lowerMsg.includes('jwt') || lowerMsg.includes('fga') || 
+		    lowerMsg.includes('auth0') || lowerMsg.includes('permission') || lowerMsg.includes('identity')) {
+			return 'auth0';
+		}
+		
+		// Bedrock patterns
+		if (lowerMsg.includes('bedrock') || lowerMsg.includes('embedding') || lowerMsg.includes('titan') || 
+		    lowerMsg.includes('nova') || lowerMsg.includes('claude')) {
+			return 'bedrock';
+		}
+		
+		// Strands patterns
+		if (lowerMsg.includes('agent') && (lowerMsg.includes('spawned') || lowerMsg.includes('engaged') || 
+		    lowerMsg.includes('responding'))) {
+			return 'strands';
+		}
+		
+		// TinyFish patterns
+		if (lowerMsg.includes('tinyfish') || lowerMsg.includes('pattern') || lowerMsg.includes('agentql') ||
+		    lowerMsg.includes('extracted') || lowerMsg.includes('intent')) {
+			return 'tinyfish';
+		}
+		
+		// Tonic patterns
+		if (lowerMsg.includes('tonic') || lowerMsg.includes('fabricate') || lowerMsg.includes('synthetic') ||
+		    lowerMsg.includes('credential generated') || lowerMsg.includes('fake credential')) {
+			return 'tonic';
+		}
+		
+		// S3 Vectors patterns
+		if (lowerMsg.includes('s3') || lowerMsg.includes('vector') || lowerMsg.includes('fingerprint') ||
+		    lowerMsg.includes('stored to honeyagent')) {
+			return 's3_vectors';
+		}
+		
+		// CloudWatch patterns
+		if (lowerMsg.includes('cloudwatch') || lowerMsg.includes('metric') || lowerMsg.includes('evolution')) {
+			return 'cloudwatch';
+		}
+		
+		return null;
+	}
+
 	function addLog(type: LogType, message: string, detail?: string) {
-		logs = [{ id: ++logId, type, message, detail }, ...logs].slice(0, 30);
+		// Determine sponsor and add attribution
+		const sponsor = getSponsorFromMessage(message);
+		let enhancedMessage = message;
+		
+		if (sponsor) {
+			const icon = sponsorIcons[sponsor];
+			const label = sponsorLabels[sponsor];
+			enhancedMessage = `${icon} [${label}] ${message}`;
+			
+			// Increment sponsor counter
+			if (sponsor === 'auth0') sponsorStats.auth0_checks++;
+			else if (sponsor === 'bedrock') sponsorStats.bedrock_calls++;
+			else if (sponsor === 'tinyfish') sponsorStats.tinyfish_patterns++;
+			else if (sponsor === 'tonic') sponsorStats.tonic_credentials++;
+			else if (sponsor === 's3_vectors') sponsorStats.s3_fingerprints++;
+			else if (sponsor === 'strands') sponsorStats.strands_agents++;
+		}
+		
+		logs = [{ id: ++logId, type, message: enhancedMessage, detail }, ...logs].slice(0, 30);
 	}
 
 	function getHexPosition(index: number, total: number): { x: number; y: number } {
@@ -325,6 +421,15 @@
 		routingDecision = null;
 		currentActor = null;
 		demoMode = null;
+		// Reset sponsor stats
+		sponsorStats = {
+			auth0_checks: 0,
+			bedrock_calls: 0,
+			tinyfish_patterns: 0,
+			tonic_credentials: 0,
+			s3_fingerprints: 0,
+			strands_agents: 0
+		};
 	}
 
 	// ============================================================
@@ -409,6 +514,44 @@
 		</button>
 	</div>
 
+	<!-- Sponsor Activity Stats -->
+	{#if demoRunning || demoComplete}
+		<div class="sponsor-stats-bar">
+			<div class="sponsor-stats-title">SPONSOR ACTIVITY</div>
+			<div class="sponsor-stats">
+				<div class="sponsor-stat">
+					<span class="sponsor-icon">🔐</span>
+					<span class="sponsor-label">Auth0</span>
+					<span class="sponsor-value">{sponsorStats.auth0_checks}</span>
+				</div>
+				<div class="sponsor-stat">
+					<span class="sponsor-icon">⚡</span>
+					<span class="sponsor-label">Strands</span>
+					<span class="sponsor-value">{sponsorStats.strands_agents}</span>
+				</div>
+				<div class="sponsor-stat">
+					<span class="sponsor-icon">🤖</span>
+					<span class="sponsor-label">Bedrock</span>
+					<span class="sponsor-value">{sponsorStats.bedrock_calls}</span>
+				</div>
+				<div class="sponsor-stat">
+					<span class="sponsor-icon">🔍</span>
+					<span class="sponsor-label">TinyFish</span>
+					<span class="sponsor-value">{sponsorStats.tinyfish_patterns}</span>
+				</div>
+				<div class="sponsor-stat">
+					<span class="sponsor-icon">🎭</span>
+					<span class="sponsor-label">Tonic</span>
+					<span class="sponsor-value">{sponsorStats.tonic_credentials}</span>
+				</div>
+				<div class="sponsor-stat">
+					<span class="sponsor-icon">📊</span>
+					<span class="sponsor-label">S3 Vectors</span>
+					<span class="sponsor-value">{sponsorStats.s3_fingerprints}</span>
+				</div>
+			</div>
+		</div>
+	{/if}
 
 	<!-- Tech Stack Banner -->
 	<div class="tech-banner">
@@ -1388,6 +1531,83 @@
 		background: linear-gradient(135deg, var(--honey-500), var(--honey-600));
 		color: var(--bg-deep);
 		box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+	}
+
+	/* Sponsor Stats Bar */
+	.sponsor-stats-bar {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		padding: 1rem 1.5rem;
+		background: rgba(0, 0, 0, 0.3);
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
+		border: 1px solid rgba(255, 183, 77, 0.15);
+		border-radius: var(--radius-md);
+		margin-bottom: 1.5rem;
+		animation: slideDown 0.5s var(--ease-out-expo);
+	}
+
+	@keyframes slideDown {
+		from {
+			opacity: 0;
+			transform: translateY(-10px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	.sponsor-stats-title {
+		font-size: 0.75rem;
+		font-weight: 700;
+		letter-spacing: 0.1em;
+		color: var(--honey-400);
+		text-transform: uppercase;
+	}
+
+	.sponsor-stats {
+		display: flex;
+		gap: 2rem;
+		flex-wrap: wrap;
+	}
+
+	.sponsor-stat {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.5rem 0.75rem;
+		background: rgba(255, 255, 255, 0.03);
+		border-radius: var(--radius-sm);
+		transition: all 0.2s ease;
+	}
+
+	.sponsor-stat:hover {
+		background: rgba(255, 255, 255, 0.06);
+		transform: translateY(-1px);
+	}
+
+	.sponsor-icon {
+		font-size: 1.25rem;
+		line-height: 1;
+	}
+
+	.sponsor-label {
+		font-size: 0.85rem;
+		font-weight: 600;
+		color: rgba(255, 255, 255, 0.7);
+		min-width: 4rem;
+	}
+
+	.sponsor-value {
+		font-size: 1.1rem;
+		font-weight: 700;
+		color: var(--safe);
+		min-width: 1.5rem;
+		text-align: right;
+		font-feature-settings: 'tnum';
+		font-variant-numeric: tabular-nums;
 	}
 
 	/* Tech Stack Banner */
