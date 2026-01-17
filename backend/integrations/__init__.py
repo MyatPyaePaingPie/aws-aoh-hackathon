@@ -5,7 +5,6 @@ import os
 
 # Check for sponsor API keys
 TONIC_API_KEY = os.getenv("TONIC_API_KEY") or os.getenv("FABRICATE_API_KEY")
-YUTORI_API_KEY = os.getenv("YUTORI_API_KEY")
 TINYFISH_API_KEY = os.getenv("TINYFISH_API_KEY")
 FREEPIK_API_KEY = os.getenv("FREEPIK_API_KEY")
 
@@ -15,21 +14,6 @@ from backend.integrations.tinyfish import (
     extract_patterns_sync,
     map_intent_to_mitre,
     calculate_risk_score,
-)
-
-# Yutori exports
-from backend.integrations.yutori import (
-    browse,
-    create_scout,
-    get_scout_status,
-    delete_scout,
-    simulate_attacker_probe,
-    parse_webhook_alert,
-    demo_simulate_threat_detection,
-    get_integration_status as get_yutori_status,
-    BrowseResult,
-    ScoutResult,
-    ThreatAlert,
 )
 
 # Tonic Fabricate exports
@@ -60,10 +44,6 @@ def get_sponsor_status() -> dict:
             "configured": tonic_is_configured(),
             "description": "Synthetic data generation for realistic fake credentials"
         },
-        "yutori": {
-            "configured": bool(YUTORI_API_KEY),
-            "description": "Threat scouting and simulation"
-        },
         "tinyfish": {
             "configured": bool(TINYFISH_API_KEY),
             "description": "AgentQL pattern extraction"
@@ -83,18 +63,6 @@ __all__ = [
     "extract_patterns_sync",
     "map_intent_to_mitre",
     "calculate_risk_score",
-    # Yutori
-    "browse",
-    "create_scout",
-    "get_scout_status",
-    "delete_scout",
-    "simulate_attacker_probe",
-    "parse_webhook_alert",
-    "demo_simulate_threat_detection",
-    "get_yutori_status",
-    "BrowseResult",
-    "ScoutResult",
-    "ThreatAlert",
     # Tonic Fabricate
     "TonicFabricateClient",
     "tonic_generate_credential",
@@ -111,7 +79,6 @@ __all__ = [
     "GeneratedImage",
     # API Keys
     "TONIC_API_KEY",
-    "YUTORI_API_KEY",
     "TINYFISH_API_KEY",
     "FREEPIK_API_KEY",
 ]

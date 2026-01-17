@@ -31,7 +31,6 @@ agents:
       - query_patterns
       - semantic_match
       - pattern_extractor      # TinyFish AgentQL
-      - threat_scout           # Yutori Scouts
     description: "Privileged processor honeypot"
     trap_profile: "elevated-access"
 
@@ -51,17 +50,6 @@ agents:
       - probe
       - harvest
       - escalate
-
-# Yutori-powered threat simulation agent
-  yutori_attacker:
-    name: "yutori-sim-001"
-    prompt_file: "prompts/yutori-attacker.md"
-    model: "amazon.nova-pro-v1:0"
-    tools:
-      - threat_scout           # Yutori browsing/scouting
-      - pattern_extractor      # TinyFish extraction
-    description: "Yutori-powered autonomous threat simulation"
-    sponsor: "yutori"
 
 # Default agent if routing fails
 default_agent: "honeypot_db_admin"

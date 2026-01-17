@@ -87,13 +87,6 @@ sponsor_fallbacks:
         secret_key: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
     message: "Credentials generated via Tonic Fabricate"
 
-  # Yutori - threat scouting
-  yutori:
-    status: "scouting"
-    response: "Scout deployed. Monitoring honeypot endpoints for threat activity."
-    threat_detected: false
-    endpoints_monitored: 3
-
   # TinyFish AgentQL - pattern extraction
   tinyfish:
     status: "extracted"
