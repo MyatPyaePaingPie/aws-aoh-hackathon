@@ -1,0 +1,81 @@
+# Provider Configuration
+# ----------------------
+# Configure which providers HoneyAgent uses for each service.
+# All providers fall back to "mock" if the required package isn't installed.
+#
+# Installation examples:
+#   pip install honeyagent           # Core only (mock providers)
+#   pip install honeyagent[auth0]    # + Auth0 identity
+#   pip install honeyagent[aws]      # + Bedrock, S3 Vectors
+#   pip install honeyagent[all]      # All providers
+
+# Identity provider for token verification and authorization
+# Options: mock, auth0
+identity:
+  type: ${IDENTITY_PROVIDER:mock}
+
+  # Auth0 configuration (requires: pip install honeyagent[auth0])
+  auth0:
+    domain: ${AUTH0_DOMAIN:}
+    client_id: ${AUTH0_CLIENT_ID:}
+    client_secret: ${AUTH0_CLIENT_SECRET:}
+    audience: ${AUTH0_AUDIENCE:}
+    # FGA (Fine-Grained Authorization) settings
+    fga_store_id: ${AUTH0_FGA_STORE_ID:}
+    fga_model_id: ${AUTH0_FGA_MODEL_ID:}
+
+  # Mock configuration (always available)
+  mock:
+    default_valid: true
+    honeypot_ratio: 0.3  # 30% of requests routed to honeypot
+
+# Vector store for fingerprint storage and semantic search
+# Options: mock, s3
+vector_store:
+  type: ${VECTOR_STORE:mock}
+
+  # S3 configuration (requires: pip install honeyagent[aws])
+  s3:
+    bucket: ${S3_BUCKET:}
+    region: ${AWS_REGION:us-east-1}
+    prefix: honeyagent/vectors
+
+  # Mock configuration (in-memory storage)
+  mock: {}
+
+# Image generator for visual honeytokens
+# Options: mock, freepik
+image_generator:
+  type: ${IMAGE_PROVIDER:mock}
+
+  # Freepik configuration (requires: pip install honeyagent[freepik])
+  freepik:
+    api_key: ${FREEPIK_API_KEY:}
+
+  # Mock configuration (returns placeholder PNG)
+  mock: {}
+
+# LLM provider for agent responses
+# Options: mock, bedrock
+llm:
+  type: ${LLM_PROVIDER:mock}
+
+  # Bedrock configuration (requires: pip install honeyagent[aws])
+  bedrock:
+    model: ${BEDROCK_MODEL:amazon.nova-pro-v1:0}
+    region: ${AWS_REGION:us-east-1}
+
+  # Mock configuration (canned responses)
+  mock: {}
+
+# Credential generator for fake credentials
+# Options: mock, tonic
+credential_generator:
+  type: ${CREDENTIAL_PROVIDER:mock}
+
+  # Tonic Fabricate configuration
+  tonic:
+    api_key: ${TONIC_API_KEY:}
+
+  # Mock configuration (random but realistic-looking fakes)
+  mock: {}
