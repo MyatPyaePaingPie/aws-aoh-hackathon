@@ -17,6 +17,15 @@ import uuid
 import httpx
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
+from pathlib import Path
+
+# Load .env file
+try:
+    from dotenv import load_dotenv
+    env_path = Path(__file__).parent.parent / ".env"
+    load_dotenv(env_path)
+except ImportError:
+    pass  # dotenv not installed, rely on environment
 
 
 # ============================================================
@@ -121,13 +130,12 @@ class FreepikClient:
                 response = await client.post(
                     f"{self.base_url}/ai/mystic",
                     headers={
-                        "Authorization": f"Bearer {self.api_key}",
+                        "x-freepik-api-key": self.api_key,
                         "Content-Type": "application/json"
                     },
                     json={
                         "prompt": prompt,
-                        "style": style,
-                        "size": size
+                        "num_images": 1
                     }
                 )
 
@@ -237,12 +245,110 @@ def get_integration_status() -> Dict[str, Any]:
 
 
 # Sync wrapper for non-async contexts
-def generate_image_sync(prompt: str) -> GeneratedImage:
-    """Synchronous image generation (uses fallback only)."""
+def generate_image_sync(prompt: str, max_polls: int = 20, poll_interval: float = 2.0) -> GeneratedImage:
+    """Synchronous image generation using Freepik Mystic API.
+
+    Freepik Mystic is async - creates task, then polls for completion.
+    """
+    import time
     image_id = str(uuid.uuid4())
-    return GeneratedImage(
-        url=_get_fallback_image(prompt),
-        source="fallback",
-        prompt=prompt,
-        image_id=image_id
-    )
+
+    # Reload env in case it wasn't loaded at module init
+    api_key = os.getenv("FREEPIK_API_KEY")
+    if not api_key:
+        try:
+            from dotenv import load_dotenv
+            env_path = Path(__file__).parent.parent / ".env"
+            load_dotenv(env_path)
+            api_key = os.getenv("FREEPIK_API_KEY")
+        except ImportError:
+            pass
+
+    if not api_key:
+        return GeneratedImage(
+            url=_get_fallback_image(prompt),
+            source="fallback",
+            prompt=prompt,
+            image_id=image_id
+        )
+
+    headers = {
+        "x-freepik-api-key": api_key,
+        "Content-Type": "application/json"
+    }
+
+    try:
+        # Step 1: Create the image generation task
+        response = httpx.post(
+            f"{FREEPIK_API_URL}/ai/mystic",
+            headers=headers,
+            json={
+                "prompt": prompt,
+                "num_images": 1
+            },
+            timeout=30.0
+        )
+
+        if response.status_code != 200:
+            return GeneratedImage(
+                url=_get_fallback_image(prompt),
+                source="fallback",
+                prompt=prompt,
+                image_id=image_id
+            )
+
+        data = response.json()
+        task_id = data.get("data", {}).get("task_id")
+
+        if not task_id:
+            return GeneratedImage(
+                url=_get_fallback_image(prompt),
+                source="fallback",
+                prompt=prompt,
+                image_id=image_id
+            )
+
+        # Step 2: Poll for completion
+        for _ in range(max_polls):
+            time.sleep(poll_interval)
+
+            result = httpx.get(
+                f"{FREEPIK_API_URL}/ai/mystic/{task_id}",
+                headers=headers,
+                timeout=30.0
+            )
+
+            if result.status_code != 200:
+                continue
+
+            result_data = result.json()
+            status = result_data.get("data", {}).get("status")
+
+            if status == "COMPLETED":
+                generated = result_data.get("data", {}).get("generated", [])
+                if generated and len(generated) > 0:
+                    return GeneratedImage(
+                        url=generated[0],
+                        source="freepik",
+                        prompt=prompt,
+                        image_id=task_id
+                    )
+                break
+            elif status == "FAILED":
+                break
+
+        # Timeout or failed - fallback
+        return GeneratedImage(
+            url=_get_fallback_image(prompt),
+            source="fallback",
+            prompt=prompt,
+            image_id=image_id
+        )
+
+    except Exception:
+        return GeneratedImage(
+            url=_get_fallback_image(prompt),
+            source="fallback",
+            prompt=prompt,
+            image_id=image_id
+        )
