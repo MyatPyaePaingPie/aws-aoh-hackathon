@@ -514,45 +514,6 @@
 		</button>
 	</div>
 
-	<!-- Sponsor Activity Stats -->
-	{#if demoRunning || demoComplete}
-		<div class="sponsor-stats-bar">
-			<div class="sponsor-stats-title">SPONSOR ACTIVITY</div>
-			<div class="sponsor-stats">
-				<div class="sponsor-stat">
-					<span class="sponsor-icon">🔐</span>
-					<span class="sponsor-label">Auth0</span>
-					<span class="sponsor-value">{sponsorStats.auth0_checks}</span>
-				</div>
-				<div class="sponsor-stat">
-					<span class="sponsor-icon">⚡</span>
-					<span class="sponsor-label">Strands</span>
-					<span class="sponsor-value">{sponsorStats.strands_agents}</span>
-				</div>
-				<div class="sponsor-stat">
-					<span class="sponsor-icon">🤖</span>
-					<span class="sponsor-label">Bedrock</span>
-					<span class="sponsor-value">{sponsorStats.bedrock_calls}</span>
-				</div>
-				<div class="sponsor-stat">
-					<span class="sponsor-icon">🔍</span>
-					<span class="sponsor-label">TinyFish</span>
-					<span class="sponsor-value">{sponsorStats.tinyfish_patterns}</span>
-				</div>
-				<div class="sponsor-stat">
-					<span class="sponsor-icon">🎭</span>
-					<span class="sponsor-label">Tonic</span>
-					<span class="sponsor-value">{sponsorStats.tonic_credentials}</span>
-				</div>
-				<div class="sponsor-stat">
-					<span class="sponsor-icon">📊</span>
-					<span class="sponsor-label">S3 Vectors</span>
-					<span class="sponsor-value">{sponsorStats.s3_fingerprints}</span>
-				</div>
-			</div>
-		</div>
-	{/if}
-
 	<!-- Tech Stack Banner -->
 	<div class="tech-banner">
 		<div class="tech-section">
@@ -1531,83 +1492,6 @@
 		background: linear-gradient(135deg, var(--honey-500), var(--honey-600));
 		color: var(--bg-deep);
 		box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
-	}
-
-	/* Sponsor Stats Bar */
-	.sponsor-stats-bar {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		padding: 1rem 1.5rem;
-		background: rgba(0, 0, 0, 0.3);
-		backdrop-filter: blur(10px);
-		-webkit-backdrop-filter: blur(10px);
-		border: 1px solid rgba(255, 183, 77, 0.15);
-		border-radius: var(--radius-md);
-		margin-bottom: 1.5rem;
-		animation: slideDown 0.5s var(--ease-out-expo);
-	}
-
-	@keyframes slideDown {
-		from {
-			opacity: 0;
-			transform: translateY(-10px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
-
-	.sponsor-stats-title {
-		font-size: 0.75rem;
-		font-weight: 700;
-		letter-spacing: 0.1em;
-		color: var(--honey-400);
-		text-transform: uppercase;
-	}
-
-	.sponsor-stats {
-		display: flex;
-		gap: 2rem;
-		flex-wrap: wrap;
-	}
-
-	.sponsor-stat {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.5rem 0.75rem;
-		background: rgba(255, 255, 255, 0.03);
-		border-radius: var(--radius-sm);
-		transition: all 0.2s ease;
-	}
-
-	.sponsor-stat:hover {
-		background: rgba(255, 255, 255, 0.06);
-		transform: translateY(-1px);
-	}
-
-	.sponsor-icon {
-		font-size: 1.25rem;
-		line-height: 1;
-	}
-
-	.sponsor-label {
-		font-size: 0.85rem;
-		font-weight: 600;
-		color: rgba(255, 255, 255, 0.7);
-		min-width: 4rem;
-	}
-
-	.sponsor-value {
-		font-size: 1.1rem;
-		font-weight: 700;
-		color: var(--safe);
-		min-width: 1.5rem;
-		text-align: right;
-		font-feature-settings: 'tnum';
-		font-variant-numeric: tabular-nums;
 	}
 
 	/* Tech Stack Banner */
