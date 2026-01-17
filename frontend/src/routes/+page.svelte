@@ -45,7 +45,7 @@
 	let threatLevel = $state<string>('NONE');
 
 	// Activity log - simplified types matching backend
-	type LogType = 'system' | 'alert' | 'phase' | 'attacker' | 'honeypot' | 'captured' | 'routing' | 'legitimate' | 'success' | 'result' | 'tinyfish' | 'cline' | 'yutori' | 'tonic';
+	type LogType = 'system' | 'alert' | 'phase' | 'attacker' | 'honeypot' | 'captured' | 'routing' | 'legitimate' | 'success' | 'result' | 'tinyfish' | 'cline' | 'tonic';
 	interface LogEntry {
 		id: number;
 		type: LogType;
@@ -564,60 +564,6 @@
 					<div class="tooltip-section">
 						<span class="tooltip-label">Output:</span>
 						<code>logs/pattern_analysis.jsonl</code>
-					</div>
-				</div>
-			</div>
-		</div>
-		<div class="tech-divider"></div>
-		<div class="tech-section">
-			<span class="tech-logo-text yutori-text">Yutori</span>
-			<div class="tech-item has-tooltip">
-				<span class="tech-badge yutori-badge">RP AI</span>
-				<span class="tech-desc">Attacker</span>
-				<div class="tech-tooltip">
-					<div class="tooltip-title">Yutori Role-Playing AI</div>
-					<div class="tooltip-section">
-						<span class="tooltip-label">File:</span>
-						<code>backend/integrations/yutori.py</code>
-					</div>
-					<div class="tooltip-section">
-						<span class="tooltip-label">Function:</span>
-						<span>Powers the attacker agent simulation using Yutori's role-playing AI. Creates realistic, adaptive attack scenarios that test honeypot defenses with human-like behavior patterns.</span>
-					</div>
-					<div class="tooltip-section">
-						<span class="tooltip-label">Attack styles:</span>
-						<span>Reconnaissance (probing), Social engineering (manipulation), Privilege escalation (aggressive), Data exfiltration (stealthy)</span>
-					</div>
-					<div class="tooltip-section">
-						<span class="tooltip-label">Key feature:</span>
-						<span>Adaptive behavior - learns from honeypot responses and adjusts tactics mid-session, simulating real attacker intelligence.</span>
-					</div>
-					<div class="tooltip-section">
-						<span class="tooltip-label">Prompt:</span>
-						<code>prompts/yutori-attacker.md</code>
-					</div>
-				</div>
-			</div>
-			<div class="tech-item has-tooltip">
-				<span class="tech-badge yutori-scout">Scout</span>
-				<span class="tech-desc">Threats</span>
-				<div class="tech-tooltip">
-					<div class="tooltip-title">Yutori Threat Scout</div>
-					<div class="tooltip-section">
-						<span class="tooltip-label">File:</span>
-						<code>backend/tools/threat_scout.py</code>
-					</div>
-					<div class="tooltip-section">
-						<span class="tooltip-label">Function:</span>
-						<span>Uses Yutori's conversational AI to probe for threat indicators. Engages attackers in seemingly helpful dialogue while extracting intelligence about their goals and methods.</span>
-					</div>
-					<div class="tooltip-section">
-						<span class="tooltip-label">Intel gathered:</span>
-						<span>Attack objectives, skill level assessment, tooling indicators, potential affiliations</span>
-					</div>
-					<div class="tooltip-section">
-						<span class="tooltip-label">Output:</span>
-						<code>logs/threat_intel.jsonl</code>
 					</div>
 				</div>
 			</div>
@@ -1409,15 +1355,6 @@
 		color: #0e1111;
 	}
 
-	.tech-badge.yutori-badge {
-		background: linear-gradient(135deg, #ec4899, #f472b6);
-		color: #fff;
-	}
-
-	.tech-badge.yutori-scout {
-		background: linear-gradient(135deg, #db2777, #ec4899);
-		color: #fff;
-	}
 
 	.tech-badge.tonic-badge {
 		background: linear-gradient(135deg, #8b5cf6, #a78bfa);
@@ -1448,9 +1385,6 @@
 		color: #34d399;
 	}
 
-	.yutori-text {
-		color: #f472b6;
-	}
 
 	.tonic-text {
 		color: #a78bfa;
@@ -2497,23 +2431,6 @@
 		font-weight: 700;
 	}
 
-	/* ============================================================
-	   SPONSOR: Yutori Log Entries
-	   ============================================================ */
-
-	.log-entry.yutori {
-		background: rgba(236, 72, 153, 0.15);
-		border-left-color: #ec4899;
-	}
-	.log-entry.yutori .log-message {
-		color: #f9a8d4;
-		font-weight: 600;
-	}
-	.log-entry.yutori .log-message::before {
-		content: '[Yutori] ';
-		color: #f472b6;
-		font-weight: 700;
-	}
 
 	/* ============================================================
 	   SPONSOR: Tonic Fabricate Log Entries
