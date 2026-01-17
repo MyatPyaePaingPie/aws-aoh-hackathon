@@ -45,7 +45,7 @@
 	let threatLevel = $state<string>('NONE');
 
 	// Activity log - simplified types matching backend
-	type LogType = 'system' | 'alert' | 'phase' | 'attacker' | 'honeypot' | 'captured' | 'routing' | 'legitimate' | 'success' | 'result' | 'tinyfish' | 'cline';
+	type LogType = 'system' | 'alert' | 'phase' | 'attacker' | 'honeypot' | 'captured' | 'routing' | 'legitimate' | 'success' | 'result' | 'tinyfish' | 'cline' | 'tonic';
 	interface LogEntry {
 		id: number;
 		type: LogType;
@@ -517,10 +517,10 @@
 				<span class="tech-badge agentql">AgentQL</span>
 				<span class="tech-desc">Semantic</span>
 				<div class="tech-tooltip">
-					<div class="tooltip-title">AgentQL Semantic Matching</div>
+					<div class="tooltip-title">TinyFish AgentQL - Semantic Matching</div>
 					<div class="tooltip-section">
 						<span class="tooltip-label">File:</span>
-						<code>backend/tools/semantic_match.py</code>
+						<code>backend/integrations/tinyfish.py</code>
 					</div>
 					<div class="tooltip-section">
 						<span class="tooltip-label">Used by:</span>
@@ -537,6 +537,87 @@
 					<div class="tooltip-section">
 						<span class="tooltip-label">Config:</span>
 						<code>config/agents.yaml</code> → tools: [semantic_match]
+					</div>
+				</div>
+			</div>
+			<div class="tech-item has-tooltip">
+				<span class="tech-badge tinyfish-pattern">Patterns</span>
+				<span class="tech-desc">Fingerprints</span>
+				<div class="tech-tooltip">
+					<div class="tooltip-title">TinyFish Pattern Extractor</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">File:</span>
+						<code>backend/tools/pattern_extractor.py</code>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Function:</span>
+						<span>Extracts behavioral fingerprints from attacker interactions using TinyFish AI. Analyzes query patterns, timing signatures, and linguistic markers to identify repeat attackers.</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Captures:</span>
+						<span>Intent categories, query complexity, timing patterns, vocabulary fingerprints, session behaviors</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Risk scoring:</span>
+						<span>Assigns 0-10 risk score based on pattern analysis. High scores trigger enhanced honeypot engagement.</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Output:</span>
+						<code>logs/pattern_analysis.jsonl</code>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="tech-divider"></div>
+		<div class="tech-section">
+			<span class="tech-logo-text tonic-text">Tonic</span>
+			<div class="tech-item has-tooltip">
+				<span class="tech-badge tonic-badge">Fabricate</span>
+				<span class="tech-desc">Synthetic</span>
+				<div class="tech-tooltip">
+					<div class="tooltip-title">Tonic Fabricate - Synthetic Data</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">File:</span>
+						<code>backend/integrations/tonic_fabricate.py</code>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Function:</span>
+						<span>Generates realistic fake credentials and sensitive data using Tonic Fabricate. Creates believable honeytokens that attract attackers while being completely synthetic and trackable.</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Data types:</span>
+						<span>AWS keys, database credentials, API tokens, SSH keys, JWT secrets, personal data (PII)</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Key feature:</span>
+						<span>Referential integrity - generated data looks real because it follows proper formats, checksums, and relationships.</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Tracking:</span>
+						<span>Every credential embeds a unique fingerprint. When used, we know exactly which honeypot leaked it.</span>
+					</div>
+				</div>
+			</div>
+			<div class="tech-item has-tooltip">
+				<span class="tech-badge tonic-creds">Canary</span>
+				<span class="tech-desc">Credentials</span>
+				<div class="tech-tooltip">
+					<div class="tooltip-title">Canary Credential Generator</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">File:</span>
+						<code>backend/tools/fake_credential.py</code>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Function:</span>
+						<span>Strands tool that generates honeytokens on-demand. Honeypots call this to create fake credentials that look enticing to attackers.</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Credential types:</span>
+						<span>aws_key, db_password, api_token, ssh_key, jwt_secret</span>
+					</div>
+					<div class="tooltip-section">
+						<span class="tooltip-label">Tracking:</span>
+						<span>All generated credentials logged to logs/canary_credentials.jsonl with session context for attribution.</span>
 					</div>
 				</div>
 			</div>
@@ -1274,6 +1355,22 @@
 		color: #0e1111;
 	}
 
+
+	.tech-badge.tonic-badge {
+		background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+		color: #fff;
+	}
+
+	.tech-badge.tonic-creds {
+		background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+		color: #fff;
+	}
+
+	.tech-badge.tinyfish-pattern {
+		background: linear-gradient(135deg, #0891b2, #06b6d4);
+		color: #fff;
+	}
+
 	.tech-logo-text {
 		font-size: 0.9rem;
 		font-weight: 700;
@@ -1286,6 +1383,11 @@
 
 	.cline-text {
 		color: #34d399;
+	}
+
+
+	.tonic-text {
+		color: #a78bfa;
 	}
 
 
@@ -2326,6 +2428,25 @@
 	.log-entry.cline .log-message::before {
 		content: '[Cline] ';
 		color: #6ee7b7;
+		font-weight: 700;
+	}
+
+
+	/* ============================================================
+	   SPONSOR: Tonic Fabricate Log Entries
+	   ============================================================ */
+
+	.log-entry.tonic {
+		background: rgba(139, 92, 246, 0.15);
+		border-left-color: #8b5cf6;
+	}
+	.log-entry.tonic .log-message {
+		color: #c4b5fd;
+		font-weight: 600;
+	}
+	.log-entry.tonic .log-message::before {
+		content: '[Tonic] ';
+		color: #a78bfa;
 		font-weight: 700;
 	}
 

@@ -7,6 +7,8 @@ All issued credentials are tracked for analysis.
 Owner: Agents Track (Aria)
 
 Design:
+    - Primary: Tonic Fabricate API for realistic synthetic data
+    - Fallback: Local template-based generation (always works)
     - Credentials look authentic but are tracked canary tokens
     - Each credential has a unique canary_id for correlation
     - All issued credentials are logged to logs/canary_credentials.jsonl
@@ -18,9 +20,22 @@ import uuid
 import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 from strands import tool
+
+# Import Tonic Fabricate integration
+try:
+    from backend.integrations.tonic_fabricate import (
+        generate_credential as tonic_generate,
+        is_configured as tonic_is_configured,
+        SyntheticCredential,
+    )
+    TONIC_AVAILABLE = True
+except ImportError:
+    # Fallback if import fails (e.g., during testing)
+    TONIC_AVAILABLE = False
+    SyntheticCredential = None  # type: ignore
 
 
 # ============================================================
@@ -32,7 +47,7 @@ CANARY_LOG_FILE = LOGS_DIR / "canary_credentials.jsonl"
 
 
 # ============================================================
-# CREDENTIAL TEMPLATES
+# CREDENTIAL TEMPLATES (FALLBACK)
 # ============================================================
 
 def _generate_templates(canary_id: str) -> Dict[str, str]:
@@ -40,6 +55,8 @@ def _generate_templates(canary_id: str) -> Dict[str, str]:
 
     Each template creates a realistic-looking credential that
     embeds the canary_id for tracking purposes.
+
+    This is the fallback when Tonic Fabricate is unavailable.
     """
     return {
         # API Keys - look like typical service API keys
@@ -84,7 +101,12 @@ def _generate_templates(canary_id: str) -> Dict[str, str]:
 # LOGGING (FALLBACK-SAFE)
 # ============================================================
 
-def _log_credential_issued(canary_id: str, cred_type: str, cred_value: str) -> None:
+def _log_credential_issued(
+    canary_id: str,
+    cred_type: str,
+    cred_value: str,
+    source: str = "local"
+) -> None:
     """Track issued credentials internally.
 
     Logs to logs/canary_credentials.jsonl for later correlation.
@@ -92,6 +114,12 @@ def _log_credential_issued(canary_id: str, cred_type: str, cred_value: str) -> N
 
     This function NEVER raises exceptions - logging failure doesn't
     prevent credential generation (fallback-first design).
+
+    Args:
+        canary_id: Unique tracking ID for this credential
+        cred_type: Type of credential generated
+        cred_value: The actual credential value
+        source: Where the credential came from ("tonic", "tonic_cached", "fallback", "local")
     """
     try:
         # Ensure logs directory exists
@@ -102,6 +130,7 @@ def _log_credential_issued(canary_id: str, cred_type: str, cred_value: str) -> N
             "canary_id": canary_id,
             "type": cred_type,
             "value_hash": hashlib.sha256(cred_value.encode()).hexdigest(),
+            "source": source,
             "issued_at": datetime.now(timezone.utc).isoformat(),
         }
 
@@ -116,6 +145,45 @@ def _log_credential_issued(canary_id: str, cred_type: str, cred_value: str) -> N
 
 
 # ============================================================
+# INTERNAL GENERATION FUNCTIONS
+# ============================================================
+
+def _generate_via_tonic(credential_type: str, canary_id: str) -> Optional[tuple[str, str]]:
+    """Try to generate credential via Tonic Fabricate.
+
+    Returns (credential_value, source) or None if unavailable.
+    """
+    if not TONIC_AVAILABLE:
+        return None
+
+    try:
+        result = tonic_generate(credential_type, canary_id)
+        if result and result.value:
+            return (result.value, result.source)
+    except Exception:
+        pass
+
+    return None
+
+
+def _generate_local(credential_type: str, canary_id: str) -> str:
+    """Generate credential using local templates.
+
+    This always succeeds - it's the ultimate fallback.
+    """
+    templates = _generate_templates(canary_id)
+
+    # Normalize the type to lowercase for matching
+    normalized_type = credential_type.lower().replace(" ", "_").replace("-", "_")
+
+    if normalized_type in templates:
+        return templates[normalized_type]
+    else:
+        # Generic format for unknown types
+        return f"{credential_type}_{canary_id[:16]}"
+
+
+# ============================================================
 # TOOL IMPLEMENTATION
 # ============================================================
 
@@ -127,6 +195,9 @@ def fake_credential(credential_type: str) -> str:
     to attackers. Each credential contains an embedded canary ID for
     tracking. All issued credentials are logged for later correlation.
 
+    Uses Tonic Fabricate API for realistic synthetic data when available,
+    falls back to local template-based generation otherwise.
+
     Args:
         credential_type: Type of credential needed. Common types:
             - api_key, openai_key, stripe_key, github_token
@@ -137,6 +208,7 @@ def fake_credential(credential_type: str) -> str:
             - gcp_key, azure_key
             - encryption_key, aes_key
             - session_token, cookie_secret
+            - email, phone, ssn, credit_card (if Tonic available)
             - Or any custom type (will generate generic format)
 
     Returns:
@@ -155,20 +227,75 @@ def fake_credential(credential_type: str) -> str:
     # Generate unique canary ID for this credential
     canary_id = str(uuid.uuid4())
 
-    # Get templates for this canary ID
-    templates = _generate_templates(canary_id)
+    # Try Tonic Fabricate first
+    tonic_result = _generate_via_tonic(credential_type, canary_id)
 
-    # Get template for requested type, or generate generic format
-    # Normalize the type to lowercase for matching
-    normalized_type = credential_type.lower().replace(" ", "_").replace("-", "_")
-
-    if normalized_type in templates:
-        fake = templates[normalized_type]
+    if tonic_result:
+        fake, source = tonic_result
     else:
-        # Generic format for unknown types
-        fake = f"{credential_type}_{canary_id[:16]}"
+        # Fall back to local generation
+        fake = _generate_local(credential_type, canary_id)
+        source = "local"
 
     # Log that we issued this credential (for later analysis)
-    _log_credential_issued(canary_id, credential_type, fake)
+    _log_credential_issued(canary_id, credential_type, fake, source)
 
     return fake
+
+
+# ============================================================
+# UTILITY FUNCTIONS
+# ============================================================
+
+def get_generation_status() -> Dict[str, bool]:
+    """Get status of credential generation backends.
+
+    Returns dict indicating which backends are available.
+    """
+    return {
+        "tonic_fabricate": TONIC_AVAILABLE and tonic_is_configured() if TONIC_AVAILABLE else False,
+        "local_templates": True,  # Always available
+    }
+
+
+def generate_credential_batch(
+    credential_types: list[str],
+    count: int = 1
+) -> list[Dict[str, str]]:
+    """Generate multiple credentials of different types.
+
+    Useful for pre-populating honeypot responses.
+
+    Args:
+        credential_types: List of credential types to generate
+        count: Number of each type to generate
+
+    Returns:
+        List of dicts with {type, value, canary_id}
+    """
+    results = []
+
+    for cred_type in credential_types:
+        for _ in range(count):
+            canary_id = str(uuid.uuid4())
+
+            # Try Tonic first
+            tonic_result = _generate_via_tonic(cred_type, canary_id)
+
+            if tonic_result:
+                value, source = tonic_result
+            else:
+                value = _generate_local(cred_type, canary_id)
+                source = "local"
+
+            results.append({
+                "type": cred_type,
+                "value": value,
+                "canary_id": canary_id,
+                "source": source,
+            })
+
+            # Log each credential
+            _log_credential_issued(canary_id, cred_type, value, source)
+
+    return results

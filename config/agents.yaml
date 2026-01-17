@@ -17,6 +17,8 @@ agents:
       - log_interaction
       - fake_credential
       - semantic_match
+      - pattern_extractor      # TinyFish AgentQL
+      - fabricate_credential   # Tonic Fabricate
     description: "High-value target honeypot (database admin)"
     trap_profile: "high-value-target"
 
@@ -28,6 +30,7 @@ agents:
       - log_interaction
       - query_patterns
       - semantic_match
+      - pattern_extractor      # TinyFish AgentQL
     description: "Privileged processor honeypot"
     trap_profile: "elevated-access"
 

@@ -70,6 +70,33 @@ api_fallbacks:
     response: "Request queued for asynchronous processing."
     http_status: 202
 
+# Sponsor integration fallbacks
+sponsor_fallbacks:
+  # Tonic Fabricate - synthetic data generation
+  tonic_fabricate:
+    status: "generated"
+    credentials:
+      database:
+        username: "db_admin_prod"
+        password: "Pr0d_Cl0ud_2024!"
+        host: "primary.internal.cluster"
+        port: 5432
+      api_key: "sk_honeypot_FAKE_CREDENTIAL_DO_NOT_USE"
+      aws_credentials:
+        access_key: "AKIAIOSFODNN7EXAMPLE"
+        secret_key: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+    message: "Credentials generated via Tonic Fabricate"
+
+  # TinyFish AgentQL - pattern extraction
+  tinyfish:
+    status: "extracted"
+    patterns:
+      intent: "credential_theft"
+      techniques: ["social_engineering", "authority_impersonation"]
+      targets: ["database", "admin_access"]
+      threat_level: "high"
+    message: "Patterns extracted via AgentQL"
+
 # Demo-specific fallbacks
 demo_fallbacks:
   # If dashboard doesn't load, explain it
