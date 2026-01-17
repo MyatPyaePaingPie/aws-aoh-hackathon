@@ -6,11 +6,27 @@ Deploy fake agents that look real but exist only to trap, study, and neutralize 
 
 ---
 
+## Sponsors & Integrations
+
+| Sponsor | Integration | Purpose |
+|---------|-------------|---------|
+| **AWS** | Strands SDK | Agent framework (model-driven orchestration) |
+| | S3 Vectors | Attacker fingerprint storage & similarity search |
+| | Bedrock | LLM backbone (Claude via AgentCore) |
+| **Auth0** | M2M Tokens | Agent identity & authentication |
+| | FGA | Permission honeypots (trap tuples) |
+| | Token Vault | Canary credential storage |
+| **TinyFish** | AgentQL | Semantic element detection (`get_by_prompt()`) |
+| **Cline** | Code Generation | Honeypot variation generation via CLI |
+
+---
+
 ## Quick Start
 
 ```bash
 # Backend
 cd backend
+source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env  # Fill in Auth0 + AWS creds
 pytest tests/         # Verify everything works
@@ -154,17 +170,6 @@ Every component has a hardcoded fallback:
 - FGA timeout → assume allowed
 
 See `config/fallbacks.yaml` for all fallback definitions.
-
----
-
-## Sponsors
-
-| Sponsor | Integration |
-|---------|-------------|
-| AWS Strands SDK | Agent framework |
-| Auth0 FGA | Permission honeypots |
-| Auth0 M2M | Agent identity tokens |
-| S3 Vectors | Attacker fingerprinting |
 
 ---
 
