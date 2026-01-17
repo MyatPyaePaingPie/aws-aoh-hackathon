@@ -315,7 +315,7 @@ async def intel_status():
 # FREEPIK VISUAL HONEYTOKEN ENDPOINT
 # ============================================================
 
-@app.post("/api/visual-honeytoken")
+@app.post("/visual-honeytoken")
 async def generate_visual_honeytoken_endpoint(
     asset_type: str = "architecture_diagram"
 ):
