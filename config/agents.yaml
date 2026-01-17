@@ -17,9 +17,8 @@ agents:
       - log_interaction
       - fake_credential
       - semantic_match
-      - pattern_extractor      # TinyFish AgentQL
-      - fabricate_credential   # Tonic Fabricate
-      - visual_honeytoken      # Freepik visual assets
+      - extract_attacker_patterns      # TinyFish AgentQL
+      - visual_honeytoken              # Freepik visual assets
     description: "High-value target honeypot (database admin)"
     trap_profile: "high-value-target"
 
@@ -31,8 +30,8 @@ agents:
       - log_interaction
       - query_patterns
       - semantic_match
-      - pattern_extractor      # TinyFish AgentQL
-      - visual_honeytoken      # Freepik visual assets
+      - extract_attacker_patterns      # TinyFish AgentQL
+      - visual_honeytoken              # Freepik visual assets
     description: "Privileged processor honeypot"
     trap_profile: "elevated-access"
 
