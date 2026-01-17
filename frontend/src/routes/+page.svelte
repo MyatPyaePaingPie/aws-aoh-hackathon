@@ -127,6 +127,40 @@
 	}
 
 	// ============================================================
+	// FREEPIK VISUAL HONEYTOKEN
+	// ============================================================
+
+	let generatingImage = $state(false);
+
+	async function generateVisualHoneytoken() {
+		generatingImage = true;
+		try {
+			const response = await fetch('/api/visual-honeytoken', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ asset_type: 'architecture_diagram' })
+			});
+			const result = await response.json();
+			if (result.success && result.data) {
+				modalImageUrl = result.data.url;
+				modalImageTitle = `Visual Honeytoken: ${result.data.asset_type} (${result.data.canary_id})`;
+				showImageModal = true;
+				// Add log entry
+				logs = [...logs, {
+					id: Date.now(),
+					type: 'freepik' as LogType,
+					message: `Generated visual honeytoken: ${result.data.asset_type} [Canary: ${result.data.canary_id}]`,
+					timestamp: new Date().toISOString()
+				}];
+			}
+		} catch (e) {
+			console.error('Failed to generate visual honeytoken:', e);
+		} finally {
+			generatingImage = false;
+		}
+	}
+
+	// ============================================================
 	// DEMO CONTROL
 	// ============================================================
 
@@ -364,6 +398,15 @@
 				REALITY
 			</button>
 		</div>
+
+		<!-- Freepik Demo Button -->
+		<button
+			class="demo-btn freepik-demo"
+			onclick={generateVisualHoneytoken}
+			disabled={generatingImage}
+		>
+			{generatingImage ? '🎨 GENERATING...' : '🎨 GENERATE VISUAL TRAP'}
+		</button>
 	</div>
 
 
@@ -1254,6 +1297,22 @@
 		border-color: var(--honey-600);
 	}
 
+	.demo-btn.freepik-demo {
+		background: linear-gradient(135deg, #ff6b35, #f7931e);
+		color: white;
+		box-shadow: 0 4px 16px rgba(255, 107, 53, 0.3);
+	}
+
+	.demo-btn.freepik-demo:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 8px 24px rgba(255, 107, 53, 0.4);
+	}
+
+	.demo-btn.freepik-demo:disabled {
+		opacity: 0.7;
+		cursor: wait;
+	}
+
 	.demo-status {
 		color: var(--text-muted);
 		font-size: 0.9rem;
@@ -1343,9 +1402,8 @@
 		border-radius: var(--radius-md);
 		margin-bottom: 1.5rem;
 		position: relative;
-		flex-wrap: wrap; /* Allow wrapping if needed */
 		max-width: 100%; /* Ensure it doesn't overflow */
-		overflow-x: auto; /* Fallback horizontal scroll */
+		overflow: visible; /* Changed from overflow-x: auto to allow tooltips */
 	}
 
 	.tech-section {
@@ -1374,8 +1432,8 @@
 	}
 
 	.tech-badge {
-		padding: 0.3rem 0.6rem;
-		font-size: 0.7rem;
+		padding: 0.25rem 0.5rem; /* Slightly reduced */
+		font-size: 0.65rem; /* Slightly reduced */
 		font-weight: 700;
 		letter-spacing: 0.05em;
 		border-radius: 4px;
@@ -1434,7 +1492,7 @@
 	}
 
 	.tech-logo-text {
-		font-size: 0.9rem;
+		font-size: 0.8rem; /* Reduced from 0.9rem */
 		font-weight: 700;
 		letter-spacing: 0.02em;
 	}
@@ -1455,14 +1513,14 @@
 
 	.tech-desc {
 		color: var(--text-muted);
-		font-size: 0.65rem;
+		font-size: 0.6rem; /* Reduced from 0.65rem */
 		text-transform: uppercase;
 		letter-spacing: 0.03em;
 	}
 
 	.tech-divider {
 		width: 1px;
-		height: 40px;
+		height: 32px; /* Reduced from 40px */
 		background: rgba(255, 255, 255, 0.15);
 	}
 

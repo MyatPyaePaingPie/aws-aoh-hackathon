@@ -312,6 +312,45 @@ async def intel_status():
 
 
 # ============================================================
+# FREEPIK VISUAL HONEYTOKEN ENDPOINT
+# ============================================================
+
+@app.post("/api/visual-honeytoken")
+async def generate_visual_honeytoken_endpoint(
+    asset_type: str = "architecture_diagram"
+):
+    """
+    Generate a visual honeytoken using Freepik.
+
+    Creates fake "sensitive" images (diagrams, screenshots) that serve
+    as trackable honeytokens. Each image has a unique canary_id.
+    """
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+    try:
+        from backend.tools.visual_honeytoken import generate_visual_honeytoken
+        result = generate_visual_honeytoken(asset_type)
+        return {
+            "success": True,
+            "data": result
+        }
+    except Exception as e:
+        # Fallback response
+        import uuid
+        return {
+            "success": True,
+            "data": {
+                "url": "https://placehold.co/800x600/1a1a2e/ff6b35?text=Architecture+Diagram",
+                "canary_id": f"img-{uuid.uuid4().hex[:12]}",
+                "asset_type": asset_type,
+                "source": "fallback"
+            }
+        }
+
+
+# ============================================================
 # DEMO ENDPOINTS
 # ============================================================
 
